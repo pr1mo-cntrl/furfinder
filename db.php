@@ -1,15 +1,18 @@
-<?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "furfinder_db";
+ <?php
+$uri = "postgresql://postgres:REDACTED_ROTATED@db.hmsmjxdkvaklpuvsrdfv.supabase.co:5432/postgres";
 
-// Database connection
-$conn = new mysqli($servername, $username, $password, $dbname);
+$db_parsed = parse_url($uri);
+$host = $db_parsed['host'];
+$port = $db_parsed['port'];
+$dbname = ltrim($db_parsed['path'], '/');
+$user = $db_parsed['user'];
+$pass = $db_parsed['pass'];
 
-// Connection check
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+    $conn = new PDO("pgsql:host=$host;port=$port;dbname=$dbname;user=$user;password=$pass");
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
 }
 
 //Session Tracking
