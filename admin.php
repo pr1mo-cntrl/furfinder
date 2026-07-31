@@ -4,13 +4,10 @@ include 'db.php';
 // Catch the update_application signal from the admin button
 if (isset($_POST['update_application'])) {
     $app_id = $_POST['app_id'];
-    $new_status = $_POST['status']; // This will grab 'Approved', 'Rejected', or 'Pending'
+    $new_status = $_POST['status']; 
 
-    // Update the specific application's status in the database
-    $update_query = "UPDATE applications SET status = '$new_status' WHERE id = '$app_id'";
-
-    if ($conn->query($update_query) === TRUE) {
-        // Refresh the page so the admin sees the new status instantly
+    $stmt = $conn->prepare("UPDATE applications SET status = ? WHERE id = ?");
+    if ($stmt->execute([$new_status, $app_id])) {
         echo "<script>alert('Application status updated to " . $new_status . "!'); window.location.href='admin.php';</script>";
     } else {
         echo "<script>alert('Error updating database.');</script>";
@@ -36,11 +33,9 @@ if (isset($_POST['add_pet'])) {
     $breed = $_POST['breed'];
     $age = $_POST['age'];
     $type = $_POST['type'];
-    // NEW FIELDS
     $backstory = $_POST['backstory'];
     $medical_history = $_POST['medical_history'];
 
-    // --- FILE UPLOAD LOGIC ---
     $target_dir = "uploads/";
     if (!file_exists($target_dir)) { mkdir($target_dir, 0777, true); }
     
@@ -55,13 +50,11 @@ if (isset($_POST['add_pet'])) {
         $target_file = $target_dir . $unique_filename;
         $image_url = $target_file; 
 
-        $target_dir = "uploads/";
         if (!is_dir($target_dir)) {
             mkdir($target_dir, 0777, true);
         }
 
         if (move_uploaded_file($_FILES["pet_photo"]["tmp_name"], $target_file)) {
-            // UPDATED QUERY TO INCLUDE BACKSTORY AND MEDICAL HISTORY
             $stmt = $conn->prepare("INSERT INTO pets (name, breed, age, backstory, medical_history, image_url, type) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, $breed, $age, $backstory, $medical_history, $image_url, $type]);
             echo "";
@@ -76,10 +69,8 @@ if (isset($_POST['add_pet'])) {
 // 2. Handle Pet Archiving (Soft Delete)
 if (isset($_POST['delete_pet'])) {
     $id = $_POST['pet_id'];
-    // This used to say DELETE FROM pets, now it just updates the flag!
     $stmt = $conn->prepare("UPDATE pets SET is_archived = 1 WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    $stmt->execute([$id]);
     echo "<script>alert('Pet securely archived.'); window.location.href='admin.php';</script>";
 }
 
@@ -91,8 +82,7 @@ if (isset($_POST['update_shelter'])) {
     $schedule = $_POST['schedule'];
     
     $stmt = $conn->prepare("UPDATE shelters SET status = ?, email = ?, schedule = ? WHERE id = ?");
-    $stmt->bind_param("sssi", $status, $email, $schedule, $id);
-    $stmt->execute();
+    $stmt->execute([$status, $email, $schedule, $id]);
     echo "<script>alert('Shelter details updated!'); window.location.href='admin.php';</script>";
 }
 
@@ -101,8 +91,7 @@ if (isset($_POST['update_application'])) {
     $id = $_POST['app_id'];
     $status = $_POST['status'];
     $stmt = $conn->prepare("UPDATE applications SET status = ? WHERE id = ?");
-    $stmt->bind_param("si", $status, $id);
-    $stmt->execute();
+    $stmt->execute([$status, $id]);
     echo "<script>window.location.href='admin.php';</script>";
 }
 
@@ -110,8 +99,7 @@ if (isset($_POST['update_application'])) {
 if (isset($_POST['mark_found'])) {
     $id = $_POST['lost_pet_id'];
     $stmt = $conn->prepare("UPDATE lost_pets SET status = 'Found' WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    $stmt->execute([$id]);
     echo "<script>alert('Lost pet marked as Found!'); window.location.href='admin.php';</script>";
 }
 
@@ -119,8 +107,7 @@ if (isset($_POST['mark_found'])) {
 if (isset($_POST['archive_application'])) {
     $id = $_POST['app_id'];
     $stmt = $conn->prepare("UPDATE applications SET is_archived = 1 WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    $stmt->execute([$id]);
     echo "<script>alert('Application securely archived.'); window.location.href='admin.php';</script>";
 }
 
@@ -128,8 +115,7 @@ if (isset($_POST['archive_application'])) {
 if (isset($_POST['delete_lost_pet'])) {
     $id = $_POST['lost_pet_id'];
     $stmt = $conn->prepare("DELETE FROM lost_pets WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    $stmt->execute([$id]);
     echo "<script>alert('Lost pet post deleted.'); window.location.href='admin.php';</script>";
 }
 
@@ -143,9 +129,7 @@ if (isset($_POST['update_pet'])) {
     $medical_history = $_POST['edit_medical_history'];
     
     $stmt = $conn->prepare("UPDATE pets SET name=?, breed=?, age=?, backstory=?, medical_history=? WHERE id=?");
-    $stmt->bind_param("sssssi", $name, $breed, $age, $backstory, $medical_history, $id);
-    
-    if($stmt->execute()){
+    if($stmt->execute([$name, $breed, $age, $backstory, $medical_history, $id])){
         echo "";
     }
 }
@@ -153,10 +137,8 @@ if (isset($_POST['update_pet'])) {
 // 9. Handle Pet Adopted
 if (isset($_POST['mark_adopted'])) {
     $id = $_POST['pet_id'];
-    // Updates the pet's status to 'adopted' in the database
     $stmt = $conn->prepare("UPDATE pets SET status = 'adopted' WHERE id = ?");
-    
-    if($stmt->execute([$status, $id])){
+    if($stmt->execute([$id])){
         echo "<script>alert('Awesome! Pet marked as adopted.'); window.location.href='admin.php';</script>";
     }
 }
@@ -165,25 +147,21 @@ if (isset($_POST['mark_adopted'])) {
 if (isset($_POST['restore_pet'])) {
     $id = $_POST['pet_id'];
     $stmt = $conn->prepare("UPDATE pets SET is_archived = 0 WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    $stmt->execute([$id]);
     echo "<script>alert('Pet restored successfully.'); window.location.href='admin.php';</script>";
 }
 
 if (isset($_POST['restore_application'])) {
     $id = $_POST['app_id'];
     $stmt = $conn->prepare("UPDATE applications SET is_archived = 0 WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    $stmt->execute([$id]);
     echo "<script>alert('Application restored successfully.'); window.location.href='admin.php';</script>";
 }
 
 // --- DESCRIPTIVE ANALYTICS DATA FETCHING ---
-// 1. Shelter Population (Dogs vs Cats)
 $dog_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='dog' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
 $cat_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='cat' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
 
-// 2. Top 5 Available Breeds
 $breed_labels = [];
 $breed_counts = [];
 $breed_res = $conn->query("SELECT breed, COUNT(*) as count FROM pets WHERE status='available' AND is_archived=0 GROUP BY breed ORDER BY count DESC LIMIT 5");
@@ -194,8 +172,6 @@ if ($breed_res) {
     }
 }
 
-// 3. Application Pipeline
-// 3. Application Pipeline
 $app_pending = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
 $app_approved = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Approved%' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
 $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LIKE 'Rejected%' OR status='Acknowledged') AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
@@ -222,7 +198,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Open Sans', sans-serif; }
         body { display: flex; min-height: 100vh; background-color: var(--bg-light); color: var(--text-dark); }
         
-        /* SIDEBAR */
         .sidebar {
             width: 250px;
             background-color: var(--primary-color);
@@ -232,7 +207,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
-
             position: sticky;
             top: 0;
             height: 100vh;
@@ -256,7 +230,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         .sidebar .logout a { color: var(--danger); }
         .sidebar .logout a:hover { background-color: rgba(220, 53, 69, 0.2); border-left-color: var(--danger); }
 
-        /* CONTENT AREA */
         .content {
             flex-grow: 1;
             padding: 40px;
@@ -274,7 +247,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         .section.active { display: block; }
         .section h3 { margin-bottom: 20px; color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 10px; }
         
-        /* DASHBOARD STATS */
         .dashboard-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -292,14 +264,12 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         .card h3 { margin-bottom: 10px; font-size: 1.1rem; color: #666; }
         .card p { font-size: 2.5rem; font-weight: bold; margin: 0; }
 
-        /* FORMS */
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
         .form-row input, .form-row select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; }
         .btn-add { background: var(--success); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
         .btn-delete { background: var(--danger); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
         .btn-save { background: var(--primary-color); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
         
-        /* TABLES */
         .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         .data-table th, .data-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle; }
         .data-table th { background-color: var(--primary-color); color: var(--white); font-weight: 600; text-transform: uppercase; }
@@ -308,11 +278,9 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         .app-status { display: flex; gap: 5px; }
         .shelter-update input { width: 100px; }
         
-        /* Document Link Style */
         .doc-link { color: var(--primary-color); text-decoration: underline; font-size: 0.85rem; display: block; margin-bottom: 3px;}
         .doc-link:hover { color: var(--accent-color); }
 
-        /* MODAL */
         .modal {
             display: none; 
             position: fixed; 
@@ -337,7 +305,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             position: relative;
         }
-        /* Specific Styles for View Details Modal to allow scrolling if content is long */
         #appDetailsModal .modal-content {
             max-height: 80vh;
             overflow-y: auto;
@@ -350,7 +317,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         .modal-content input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
         .modal-content .btn-primary { margin-top: 20px; width: 100%; padding: 10px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer; }
 
-        /* Styles for the View Questionnaire functionality */
         .btn-view { background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-top: 5px; width: 100%; }
         .btn-view:hover { background: #138496; }
         .detail-row { display: flex; border-bottom: 1px solid #eee; padding: 10px 0; }
@@ -369,9 +335,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             <li><a href="#" onclick="showSection('lost-found', this)"><i class="fas fa-search-location"></i> Lost & Found</a></li>
             <li><a href="#" onclick="showSection('shelter-status', this)"><i class="fas fa-home"></i> Shelter Status</a></li>
             <li><a href="#" onclick="showSection('archives', this)"><i class="fas fa-archive"></i> Archives</a></li>
-            
-
-            <!--<li><a href="#" onclick="showSection('donations', this)"><i class="fas fa-hand-holding-usd"></i> Donations</a></li>-->
         </ul>
         <div class="logout">
             <ul><li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li></ul>
@@ -460,7 +423,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                             <td><?php echo htmlspecialchars($row['breed']); ?></td>
                             <td><?php echo ucfirst($row['type']); ?></td>
                             <td><?php echo $row['status']; ?></td>
-                            
                             <td>
                                 <div style="display: flex; gap: 5px; align-items: center;">
                                     <?php if(strtolower($row['status']) != 'adopted'): ?>
@@ -502,7 +464,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 </thead>
                 <tbody>
                     <?php
-                    // Query specifically for is_archived = 1
                     $archived_pets = $conn->query("SELECT * FROM pets WHERE is_archived = 1 ORDER BY id DESC");
                     if ($archived_pets && $archived_pets->rowCount() > 0) {
                         while($row = $archived_pets->fetch(PDO::FETCH_ASSOC)):
@@ -540,7 +501,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 </thead>
                 <tbody>
                     <?php
-                    // Query specifically for is_archived = 1
                     $archived_apps = $conn->query("SELECT * FROM applications WHERE is_archived = 1 ORDER BY id DESC");
                     if ($archived_apps && $archived_apps->rowCount() > 0) {
                         while($row = $archived_apps->fetch(PDO::FETCH_ASSOC)):
@@ -571,7 +531,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">An overview of current shelter statistics and adoption pipelines.</p>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
-                <!-- Chart 1: Pets by Type -->
                 <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px;">
                     <h4 style="text-align:center; margin-bottom:15px; color:#555;">Active Population</h4>
                     <div style="position: relative; height:250px;">
@@ -579,7 +538,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     </div>
                 </div>
 
-                <!-- Chart 2: Top Available Breeds -->
                 <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px;">
                     <h4 style="text-align:center; margin-bottom:15px; color:#555;">Top 5 Available Breeds</h4>
                     <div style="position: relative; height:250px;">
@@ -587,7 +545,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     </div>
                 </div>
                 
-                <!-- Chart 3: Application Statuses -->
                 <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; grid-column: 1 / -1;">
                     <h4 style="text-align:center; margin-bottom:15px; color:#555;">Application Pipeline</h4>
                     <div style="position: relative; height:250px; max-height: 300px; display: flex; justify-content: center;">
@@ -597,10 +554,9 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             </div>
         </div>
 
-<div id="applications" class="section">
+        <div id="applications" class="section">
             <h3>Adoption Applications (Requires Document Review)</h3>
             
-            <!-- 1. SUB-TABS NAVIGATION -->
             <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
                 <button type="button" class="app-tab-btn" style="padding: 8px 20px; border: none; background: var(--primary-color); color: white; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="filterApps('pending', this)">Pending Review</button>
                 <button type="button" class="app-tab-btn" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="filterApps('approved', this)">Approved</button>
@@ -623,15 +579,10 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     while($row = $apps->fetch(PDO::FETCH_ASSOC)):
                         $safeData = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
                         
-                        // Strip out '_Seen' so the admin tabs still categorize them correctly!
                         $clean_status = str_replace('_Seen', '', $row['status']);
                         $statusClass = strtolower($clean_status);
-                        // Catch legacy 'Acknowledged' items and put them in rejected/completed
                         if ($statusClass == 'acknowledged') { $statusClass = 'rejected'; }
                     ?>
-                        <tr class="app-row status-<?php echo $statusClass; ?>">
-
-                        <!-- 2. ADD CLASS TO ROW FOR JAVASCRIPT TO FIND -->
                         <tr class="app-row status-<?php echo $statusClass; ?>">
                             <td style="font-weight:bold; color:var(--primary-color);"><?php echo $row['pet_name']; ?></td>
                             <td>
@@ -683,23 +634,17 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 </tbody>
             </table>
             
-            <!-- 3. JAVASCRIPT TO HANDLE TAB SWITCHING -->
             <script>
             function filterApps(status, btn) {
-                // Reset all buttons to gray
                 document.querySelectorAll('.app-tab-btn').forEach(b => {
                     b.style.background = '#e2e6ea';
                     b.style.color = '#333';
                 });
-                // Highlight the button that was just clicked
                 btn.style.background = 'var(--primary-color)';
                 btn.style.color = 'white';
 
-                // Show/hide rows based on the class we added in PHP
                 document.querySelectorAll('.app-row').forEach(row => {
-                    row.style.display = 'none'; // hide all rows by default
-                    
-                    // Show row if it matches the status (we group Rejected and Acknowledged together)
+                    row.style.display = 'none'; 
                     if (status === 'rejected' && (row.classList.contains('status-rejected') || row.classList.contains('status-acknowledged'))) {
                         row.style.display = ''; 
                     } else if (row.classList.contains('status-' + status)) {
@@ -708,7 +653,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 });
             }
 
-            // Run automatically when the admin page loads so it only shows "Pending" by default!
             document.addEventListener('DOMContentLoaded', () => {
                 const pendingBtn = document.querySelector('.app-tab-btn');
                 if (pendingBtn) filterApps('pending', pendingBtn);
@@ -803,38 +747,9 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 </tbody>
             </table>
         </div>
-        
-        <!--
-        <div id="donations" class="section">
-            <h3>Recent Donations</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Donor Name</th>
-                        <th>Amount (PHP)</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $donations = $conn->query("SELECT * FROM donations ORDER BY date_created DESC");
-                    while($row = $donations->fetch(PDO::FETCH_ASSOC)):
-                    ?>
-                        <tr>
-                            <td><?php echo date('M d, Y', strtotime($row['date_created'])); ?></td>
-                            <td><?php echo $row['donor_name']; ?></td>
-                            <td style="font-weight:bold; color:var(--success);"><?php echo number_format($row['amount'], 2); ?></td>
-                            <td><?php echo htmlspecialchars($row['message']); ?></td>
-                        </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
-        </div>
-                    -->
     </div> 
     
-<div id="editPetModal" class="modal">
+    <div id="editPetModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="document.getElementById('editPetModal').style.display='none'">&times;</span>
             <h3>Edit Pet Details</h3>
@@ -859,13 +774,11 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         <div class="modal-content">
             <span class="close-modal" onclick="document.getElementById('appDetailsModal').style.display='none'">&times;</span>
             <h3 style="border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; margin-bottom: 20px;">Adoption Questionnaire</h3>
-            <div id="appDetailsContent">
-                </div>
+            <div id="appDetailsContent"></div>
         </div>
     </div>
 
     <script>
-        // --- DYNAMIC DROPDOWN LOGIC ---
         const breedOptions = {
             'dog': ['Aspin', 'Shih Tzu', 'Chow Chow', 'Golden Retriever', 'Pomeranian', 'Mixed Breed', 'Other'],
             'cat': ['Puspin', 'Persian', 'Siamese', 'Maine Coon', 'Mixed Breed', 'Other']
@@ -903,7 +816,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             }
         }
 
-        // --- SIDEBAR NAVIGATION LOGIC ---
         function showSection(sectionId, element) {
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
@@ -915,7 +827,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             element.classList.add('active');
         }
 
-        // --- MODAL LOGIC ---
         function openEditModal(id, name, breed, age, backstory, medical) {
             document.getElementById('edit_pet_id').value = id;
             document.getElementById('edit_name').value = name;
@@ -943,17 +854,14 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 <div class="detail-row"><span class="detail-label">Source of Income:</span> <span class="detail-value">${data.income_source || '<span style="color:#999">N/A</span>'}</span></div>
                 <div class="detail-row"><span class="detail-label">Hours Pet Alone:</span> <span class="detail-value">${data.hours_alone || '<span style="color:#999">N/A</span>'}</span></div>
             `;
-            
             container.innerHTML = html;
             document.getElementById('appDetailsModal').style.display = 'flex';
         }
 
-        // --- INITIALIZE CHARTS ON LOAD ---
         document.addEventListener('DOMContentLoaded', () => {
              const managePetsSection = document.getElementById('manage-pets');
              if(managePetsSection) managePetsSection.classList.add('active');
 
-             // 1. POPULATION CHART (Doughnut)
              const typeChartEl = document.getElementById('typeChart');
              if (typeChartEl) {
                  new Chart(typeChartEl.getContext('2d'), {
@@ -970,7 +878,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                  });
              }
 
-             // 2. BREED CHART (Bar)
              const breedChartEl = document.getElementById('breedChart');
              if (breedChartEl) {
                  new Chart(breedChartEl.getContext('2d'), {
@@ -992,7 +899,6 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                  });
              }
 
-             // 3. APP PIPELINE CHART (Pie)
              const appChartEl = document.getElementById('appChart');
              if (appChartEl) {
                  new Chart(appChartEl.getContext('2d'), {
