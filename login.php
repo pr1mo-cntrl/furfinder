@@ -35,8 +35,8 @@ if (isset($_POST['login'])) {
     $password = $_POST['password'];
 
     $result = $conn->query("SELECT * FROM users WHERE email='$email'");
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
+    if ($result->rowCount() > 0) {
+        $row = $result->fetch(PDO::FETCH_ASSOC);
         if (password_verify($password, $row['password'])) {
             session_regenerate_id(true);
             $_SESSION['user_id'] = $row['id'];
