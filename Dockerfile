@@ -9,3 +9,5 @@ COPY . /var/www/html/
 
 # Enable Apache rewrite module
 RUN a2enmod rewrite
+
+RUN mkdir -p uploads && chmod 777 uploads
