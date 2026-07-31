@@ -57,6 +57,7 @@ if (isset($_POST['add_pet'])) {
             header("Location: admin.php");
             exit();
         } else {
+            $error_details = addslashes($response);
             echo "<script>alert('Error uploading image to Supabase Storage.');</script>";
         }
     }
