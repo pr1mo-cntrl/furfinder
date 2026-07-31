@@ -1,10 +1,27 @@
 <?php
-prepare("INSERT INTO users (name, email, password, role, barangay, age_group, current_pets_status, preferred_breed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+include 'db.php';
+
+// HANDLE REGISTER
+if (isset($_POST['register'])) {
+    $name = $_POST['name'];
+    $email = strtolower(trim($_POST['email']));
+    $pass = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    
+    $barangay = $_POST['barangay'];
+    $age_group = $_POST['age_group'];
+    $current_pets = $_POST['current_pets_status'];
+    $pref_breed = $_POST['preferred_breed'];
+    
+    $role = 'user';
+    if ($email === 'admin@furfinder.com') { $role = 'admin'; }
+
+    try {
+        $stmt = $conn->prepare("INSERT INTO users (name, email, password, role, barangay, age_group, current_pets_status, preferred_breed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         if ($stmt->execute([$name, $email, $pass, $role, $barangay, $age_group, $current_pets, $pref_breed])) {
-            echo "<" . "script>alert('Registration Successful! Please Login.');";
+            echo "<" . "script>alert('Registration Successful! Please Login.');</" . "script>";
         }
     } catch (PDOException $e) {
-        echo "<" . "script>alert('Registration Error');";
+        echo "<" . "script>alert('Registration Error: " . $e->getMessage() . "');</" . "script>";
     }
 }
 
@@ -33,13 +50,13 @@ if (isset($_POST['login'])) {
                     exit();
                 }
             } else {
-                echo "<" . "script>alert('Invalid Password');";
+                echo "<" . "script>alert('Invalid Password');</" . "script>";
             }
         } else {
-            echo "<" . "script>alert('User not found');";
+            echo "<" . "script>alert('User not found');</" . "script>";
         }
     } catch (PDOException $e) {
-        echo "<" . "script>alert('Database Error');";
+        echo "<" . "script>alert('Database Error: " . $e->getMessage() . "');</" . "script>";
     }
 }
 ?>
@@ -50,9 +67,7 @@ if (isset($_POST['login'])) {
     <title>Login | FurFinder</title>
     <style>
         body { font-family: 'Open Sans', sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        /* Increased width slightly to accommodate the longer form nicely */
         .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; box-sizing: border-box; }
-        /* Added box-sizing so padding doesn't push inputs outside the container */
         input, select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
         button { width: 100%; padding: 12px; background: #003366; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; margin-top: 10px; }
         button:hover { background: #d4af37; color: #003366; }
