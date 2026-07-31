@@ -155,9 +155,8 @@ if (isset($_POST['mark_adopted'])) {
     $id = $_POST['pet_id'];
     // Updates the pet's status to 'adopted' in the database
     $stmt = $conn->prepare("UPDATE pets SET status = 'adopted' WHERE id = ?");
-    $stmt->bind_param("i", $id);
     
-    if($stmt->execute()){
+    if($stmt->execute([$status, $id])){
         echo "<script>alert('Awesome! Pet marked as adopted.'); window.location.href='admin.php';</script>";
     }
 }
