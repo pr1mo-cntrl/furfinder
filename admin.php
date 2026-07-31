@@ -177,8 +177,8 @@ if (isset($_POST['restore_application'])) {
 
 // --- DESCRIPTIVE ANALYTICS DATA FETCHING ---
 // 1. Shelter Population (Dogs vs Cats)
-$dog_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='dog' AND is_archived=0")->fetch_row()[0] ?? 0;
-$cat_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='cat' AND is_archived=0")->fetch_row()[0] ?? 0;
+$dog_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='dog' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
+$cat_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='cat' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
 
 // 2. Top 5 Available Breeds
 $breed_labels = [];
@@ -193,9 +193,9 @@ if ($breed_res) {
 
 // 3. Application Pipeline
 // 3. Application Pipeline
-$app_pending = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived=0")->fetch_row()[0] ?? 0;
-$app_approved = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Approved%' AND is_archived=0")->fetch_row()[0] ?? 0;
-$app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LIKE 'Rejected%' OR status='Acknowledged') AND is_archived=0")->fetch_row()[0] ?? 0;
+$app_pending = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
+$app_approved = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Approved%' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
+$app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LIKE 'Rejected%' OR status='Acknowledged') AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
 ?>
 
 <!DOCTYPE html>
@@ -382,19 +382,19 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             <div class="card" style="border-left-color: var(--primary-color);">
                 <h3>Total Pets</h3>
                 <p style="color: var(--primary-color);">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM pets WHERE is_archived = 0")->fetch_row()[0]; ?>
+                    <?php echo $conn->query("SELECT COUNT(*) FROM pets WHERE is_archived = 0")->fetch(PDO::FETCH_NUM)[0]; ?>
                 </p>
             </div>
             <div class="card" style="border-left-color: var(--accent-color);">
                 <h3>Pending Applications</h3>
                 <p style="color: var(--accent-color);">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived = 0")->fetch_row()[0]; ?>
+                    <?php echo $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived = 0")->fetch(PDO::FETCH_NUM)[0]; ?>
                 </p>
             </div>
             <div class="card" style="border-left-color: var(--danger);">
                 <h3>Lost Reports</h3>
                 <p style="color: var(--danger);">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='Missing'")->fetch_row()[0]; ?>
+                    <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='Missing'")->fetch(PDO::FETCH_NUM)[0]; ?>
                 </p>
             </div>
         </div>
