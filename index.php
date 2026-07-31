@@ -62,7 +62,7 @@ if (isset($_POST['submit_lost_report'])) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_POSTFIELDS, $file_data);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Required for Render
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             "Authorization: Bearer $supabase_key",
             "Content-Type: " . $_FILES["lf_photo"]["type"],
@@ -171,7 +171,6 @@ if ($progress_percent > 100) $progress_percent = 100;
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* CSS RESET & VARS */
         :root {
             --primary-color: #003366; 
             --accent-color: #d4af37; 
@@ -186,7 +185,6 @@ if ($progress_percent > 100) $progress_percent = 100;
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Open Sans', sans-serif; }
         body { background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; padding-bottom: 50px; overflow-x: hidden; }
 
-        /* LOADING SCREEN STYLES */
         #loader {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: var(--primary-color); z-index: 9999;
@@ -198,7 +196,6 @@ if ($progress_percent > 100) $progress_percent = 100;
         @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-20px); } }
         @keyframes fadeInText { to { opacity: 1; } }
 
-        /* NAV */
         nav { background-color: var(--primary-color); color: var(--white); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .logo { display: flex; align-items: center; font-size: 1.5rem; font-weight: 700; gap: 10px; }
         .logo i { color: var(--accent-color); }
@@ -207,10 +204,8 @@ if ($progress_percent > 100) $progress_percent = 100;
         .nav-links a:hover, .nav-links a.active { background-color: rgba(255,255,255,0.15); color: var(--accent-color); }
         .auth-btn { background: var(--accent-color); color: var(--primary-color) !important; padding: 8px 20px !important; border-radius: 20px; text-align: center; }
         
-        /* NEW: Hamburger Menu Icon */
         .menu-toggle { display: none; font-size: 1.8rem; cursor: pointer; color: white; }
 
-        /* LAYOUT */
         .container { max-width: 1100px; margin: 2rem auto; padding: 0 20px; display: none; }
         .container.active { display: block; animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -218,18 +213,15 @@ if ($progress_percent > 100) $progress_percent = 100;
         .section-header { text-align: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #ddd; }
         img { max-width: 100%; height: auto; }
 
-        /* HERO */
         .hero { background: linear-gradient(rgba(0,51,102,0.7), rgba(0,51,102,0.7)), url('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80'); background-size: cover; background-position: center; padding: 4rem 2rem; border-radius: 8px; text-align: center; margin-bottom: 2rem; color: white; }
         .hero h1 { color: white; font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.6); }
         .hero p { color: #f1f1f1; font-size: 1.1rem; }
 
-        /* CONTENT */
         .content-box { background: white; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
         .ordinance-box { border-left: 5px solid var(--accent-color); }
         .req-list li { margin-bottom: 15px; list-style: none; padding-left: 1.5rem; position: relative; }
         .req-list li::before { content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900; color: var(--success); position: absolute; left: 0; top: 3px; }
 
-        /* FAQ STYLE */
         .faq-box { margin-top: 2rem; }
         .faq-item { border-bottom: 1px solid #eee; padding: 15px 0; }
         .faq-item h4 { color: var(--primary-color); margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
@@ -238,7 +230,6 @@ if ($progress_percent > 100) $progress_percent = 100;
         .faq-item.open p { display: block; animation: slideDown 0.3s ease; }
         @keyframes slideDown { from {opacity:0; transform:translateY(-5px);} to {opacity:1; transform:translateY(0);} }
 
-        /* PET GRID & CARDS */
         .pet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
         .pet-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 3px 6px rgba(0,0,0,0.1); transition: var(--transition); position: relative; }
         .pet-card:hover { transform: translateY(-5px); }
@@ -249,7 +240,6 @@ if ($progress_percent > 100) $progress_percent = 100;
         
         .badge-new { position: absolute; top: 10px; right: 10px; background: var(--accent-color); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         
-        /* LOST & FOUND */
         .lf-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; }
         .report-form { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
         .missing-feed { display: flex; flex-direction: column; gap: 15px; }
@@ -258,14 +248,12 @@ if ($progress_percent > 100) $progress_percent = 100;
         .missing-img-container img { width: 100%; height: 100%; object-fit: cover; }
         .active-report-card { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
 
-        /* SHELTERS */
         .shelter-card { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 2rem; display: flex; gap: 2rem; align-items: flex-start; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
         .shelter-logo img { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid var(--primary-color); padding: 2px; }
         .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; margin-left: 10px; }
         .status-open { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .status-full { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
-        /* FORMS & MODALS */
         .form-group { margin-bottom: 1rem; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: #555; }
         .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
@@ -278,11 +266,7 @@ if ($progress_percent > 100) $progress_percent = 100;
         .modal-content { background-color: #fefefe; padding: 2rem; border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; animation: fadeIn 0.3s; }
         .close-modal { float: right; font-size: 28px; cursor: pointer; color: #aaa; position: absolute; right: 20px; top: 15px; }
 
-        /* =========================================================
-           NEW RESPONSIVE MEDIA QUERIES FOR PHONES AND TABLETS 
-           ========================================================= */
         @media (max-width: 768px) {
-            /* Mobile Navbar */
             .menu-toggle { display: block; }
             nav { padding: 1rem; }
             .nav-links { 
@@ -300,24 +284,20 @@ if ($progress_percent > 100) $progress_percent = 100;
             .nav-links li { width: 100%; text-align: center; margin: 5px 0; }
             .nav-links a { display: inline-block; width: 90%; }
             
-            /* Responsive Content Adjustments */
             .hero { padding: 2rem 1rem; }
             .hero h1 { font-size: 1.8rem; }
             .content-box, .ordinance-box { padding: 1.5rem; }
             
-            /* Layout Grids */
             .lf-layout { grid-template-columns: 1fr; }
             .shelter-card { flex-direction: column; align-items: center; text-align: center; }
             .missing-card { flex-direction: column; align-items: center; text-align: center; }
             .missing-img-container { width: 100%; height: 200px; }
             
-            /* Active Reports Adjustments */
             .active-report-card { flex-direction: column; text-align: center; width: 100%; }
             .active-report-actions { justify-content: center; width: 100%; margin-top: 10px; }
             .active-report-actions form { width: 48%; }
             .active-report-actions button { width: 100%; }
             
-            /* Search Filters */
             form[method="GET"] { flex-direction: column; }
             form[method="GET"] input, form[method="GET"] select, form[method="GET"] button { width: 100%; }
         }
@@ -332,7 +312,6 @@ if ($progress_percent > 100) $progress_percent = 100;
 
     <nav>
         <div class="logo"><i class="fas fa-paw"></i> FurFinder</div>
-        <!-- Hamburger Menu Button -->
         <div class="menu-toggle" onclick="toggleMobileNav()"><i class="fas fa-bars"></i></div>
         
         <ul class="nav-links" id="nav-links">
@@ -373,7 +352,6 @@ if ($progress_percent > 100) $progress_percent = 100;
     <?php unset($_SESSION['flash_msg']); endif; ?> 
 
     <?php
-// 1. Handle dismiss actions for Approved or Rejected applications
 if (isset($_POST['dismiss_notification'])) {
     $app_id_to_dismiss = $_POST['app_id'];
     
@@ -386,7 +364,6 @@ if (isset($_POST['dismiss_notification'])) {
     echo "<script>window.location.href='index.php';</script>";
 }
 
-// 2. Display notifications for logged-in users
 if (isset($_SESSION['user_id'])) {
     $current_user_id = $_SESSION['user_id']; 
     
@@ -587,193 +564,166 @@ if (isset($_SESSION['user_id'])) {
     </section>
 
     <section id="lost" class="container">
-    <div class="section-header">
-        <h2>Lost & Found</h2>
-    </div>
+        <div class="section-header">
+            <h2>Lost & Found</h2>
+        </div>
 
-    <?php if(isset($_SESSION['user_id'])): ?>
-    <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; border-top: 4px solid var(--primary-color);">
-        <h3 style="margin-bottom: 15px; color: var(--primary-color);"><i class="fas fa-clipboard-list"></i> My Active Reports</h3>
-        
-        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-            <?php
-            $my_uid = $_SESSION['user_id'];
-            $my_reports = $conn->query("SELECT * FROM lost_pets WHERE user_id = '$my_uid' AND status = 'Missing'");
+        <?php if(isset($_SESSION['user_id'])): ?>
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; border-top: 4px solid var(--primary-color);">
+            <h3 style="margin-bottom: 15px; color: var(--primary-color);"><i class="fas fa-clipboard-list"></i> My Active Reports</h3>
             
-            if($my_reports && $my_reports->rowCount() > 0) {
-                while($my_row = $my_reports->fetch(PDO::FETCH_ASSOC)) {
+            <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                <?php
+                $my_uid = $_SESSION['user_id'];
+                $my_reports = $conn->query("SELECT * FROM lost_pets WHERE user_id = '$my_uid' AND status = 'Missing'");
+                
+                if($my_reports && $my_reports->rowCount() > 0) {
+                    while($my_row = $my_reports->fetch(PDO::FETCH_ASSOC)) {
+                    ?>
+                    <div class="active-report-card" style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                        <img src="<?php echo $my_row['photo_path']; ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
+                        <div style="flex-grow: 1;">
+                            <strong style="color: var(--danger);"><?php echo htmlspecialchars($my_row['pet_name']); ?></strong><br>
+                            <span style="font-size: 0.85rem; color: #666;">Reported Missing</span>
+                        </div>
+                        <div class="active-report-actions" style="display: flex; gap: 8px;">
+                            <form method="POST" style="margin: 0;">
+                                <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
+                                <button type="submit" name="mark_as_found" class="btn-primary" style="background: var(--success); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to mark this pet as found?');">
+                                    <i class="fas fa-check"></i> Found
+                                </button>
+                            </form>
+                            <form method="POST" style="margin: 0;">
+                                <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
+                                <button type="submit" name="delete_own_report" class="btn-primary" style="background: var(--danger); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to permanently delete this report?');">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <?php
+                }
+                } else {
+                    echo "<p style='color: #666; font-size: 0.9rem; margin: 0;'>You currently have no active missing pet reports.</p>";
+                }
                 ?>
-                <div class="active-report-card" style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                    <img src="<?php echo $my_row['photo_path']; ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
-                    <div style="flex-grow: 1;">
-                        <strong style="color: var(--danger);"><?php echo htmlspecialchars($my_row['pet_name']); ?></strong><br>
-                        <span style="font-size: 0.85rem; color: #666;">Reported Missing</span>
-                    </div>
-                    <div class="active-report-actions" style="display: flex; gap: 8px;">
-                        <form method="POST" style="margin: 0;">
-                            <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
-                            <button type="submit" name="mark_as_found" class="btn-primary" style="background: var(--success); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to mark this pet as found?');">
-                                <i class="fas fa-check"></i> Found
-                            </button>
-                        </form>
-                        <form method="POST" style="margin: 0;">
-                            <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
-                            <button type="submit" name="delete_own_report" class="btn-primary" style="background: var(--danger); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to permanently delete this report?');">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
-                    </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div class="lf-layout">
+            <!-- LEFT COLUMN: REPORT FORM -->
+            <div class="report-form">
+                <h3>Report Missing Pet</h3>
+                <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; margin-bottom: 20px; text-align: center; font-size: 0.9rem;">
+                    <strong><i class="fas fa-user-lock"></i> Privacy Notice:</strong><br>
+                    Your contact information is kept strictly confidential. Only the <strong>CVAO Admin</strong> will be able to view your phone number to coordinate with you if your pet is found.
                 </div>
-                <?php
-            }
-            } else {
-                echo "<p style='color: #666; font-size: 0.9rem; margin: 0;'>You currently have no active missing pet reports.</p>";
-            }
-            ?>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <div class="lf-layout">
-        <!-- LEFT COLUMN: REPORT FORM -->
-        <div class="report-form">
-            <h3>Report Missing Pet</h3>
-            <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; margin-bottom: 20px; text-align: center; font-size: 0.9rem;">
-                <strong><i class="fas fa-user-lock"></i> Privacy Notice:</strong><br>
-                Your contact information is kept strictly confidential. Only the <strong>CVAO Admin</strong> will be able to view your phone number to coordinate with you if your pet is found.
-            </div>
-            <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Are you sure you want to post this lost pet alert?');">
-                <div class="form-group"><label>Pet Name</label><input type="text" name="lf_name" required></div>
-                <div class="form-group"><label>Location Last Seen</label><input type="text" name="lf_location" required></div>
-                <div class="form-group"><label>Time & Date Last Seen</label><input type="datetime-local" name="lf_time" required></div>
-                <div class="form-group"><label>Contact No.</label><input type="tel" name="lf_contact" required></div>
-                <div class="form-group"><label>Photo of Pet</label><input type="file" name="lf_photo" accept="image/*" required></div>
-                <div class="form-group"><label>Description of Pet</label><textarea name="lf_desc"></textarea></div>
-                <button type="submit" name="submit_lost_report" class="btn-primary">Post Alert</button>
-            </form>
-        </div>
-
-        <!-- RIGHT COLUMN: FEED WRAPPER -->
-        <div>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
-                <button type="button" id="tab-btn-missing" style="padding: 8px 20px; border: none; background: var(--danger); color: white; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchLfTab('missing')">
-                    <i class="fas fa-search"></i> Still Missing
-                </button>
-                <button type="button" id="tab-btn-found" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchLfTab('found')">
-                    <i class="fas fa-check-circle"></i> Reunited
-                </button>
+                <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Are you sure you want to post this lost pet alert?');">
+                    <div class="form-group"><label>Pet Name</label><input type="text" name="lf_name" required></div>
+                    <div class="form-group"><label>Location Last Seen</label><input type="text" name="lf_location" required></div>
+                    <div class="form-group"><label>Time & Date Last Seen</label><input type="datetime-local" name="lf_time" id="lf_time_input" required></div>
+                    <div class="form-group"><label>Contact No.</label><input type="tel" name="lf_contact" required></div>
+                    <div class="form-group"><label>Photo of Pet</label><input type="file" name="lf_photo" accept="image/*" required></div>
+                    <div class="form-group"><label>Description of Pet</label><textarea name="lf_desc"></textarea></div>
+                    <button type="submit" name="submit_lost_report" class="btn-primary">Post Alert</button>
+                </form>
             </div>
 
-            <!-- MISSING SECTION -->
-            <div id="feed-missing" style="display: block;">
-                <?php
-                $missing_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' ORDER BY id DESC");
+            <!-- RIGHT COLUMN: TABBED FEED -->
+            <div class="missing-feed">
+                <h3>Recent Reports</h3>
                 
-                if($missing_query && $missing_query->rowCount() > 0) {
-                    while($row = $missing_query->fetch(PDO::FETCH_ASSOC)){
-                        $map_query = urlencode($row['location'] . " Baguio City");
-                        $map_link = "https://www.google.com/maps/search/?api=1&query=" . $map_query;
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+                    <button type="button" id="tab-btn-missing" style="padding: 8px 20px; border: none; background: var(--danger); color: white; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchLfTab('missing')">
+                        <i class="fas fa-search"></i> Still Missing
+                    </button>
+                    <button type="button" id="tab-btn-found" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchLfTab('found')">
+                        <i class="fas fa-check-circle"></i> Reunited
+                    </button>
+                </div>
 
-                        echo "<div class='missing-card' style='border-left: 5px solid var(--danger); background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch;'>
-                            <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
-                                <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover;'>
-                            </div>
-                            <div style='flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;'>
-                                <div>
-                                    <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;'>
-                                        <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'>" . htmlspecialchars($row['pet_name']) . "</h4>
-                                        <span style='background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>Missing</span>
-                                    </div>
-                                    <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>";
-                                    
-                                    if (!empty($row['description'])) {
-                                        echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
-                                    }
-                                    
-                                echo "</div>
-                                
-                                <div style='margin-top: auto; border-top: 1px solid #eee; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;'>
-                                    <span style='font-size: 0.8rem; color: #777;'>Contact CVAO to report/claim:</span>
-                                    <a href='tel:0744435332' style='text-decoration:none; color:var(--primary-color); font-weight:bold; font-size: 0.9rem; background: #eef2f5; padding: 4px 10px; border-radius: 4px;'><i class='fas fa-phone'></i> (074) 443-5332</a>
+                <div id="feed-missing" style="display: block;">
+                    <?php
+                    $missing_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' ORDER BY id DESC");
+                    
+                    if($missing_query && $missing_query->rowCount() > 0) {
+                        while($row = $missing_query->fetch(PDO::FETCH_ASSOC)){
+                            $map_query = urlencode($row['location'] . " Baguio City");
+                            $map_link = "https://www.google.com/maps/search/?api=1&query=" . $map_query;
+
+                            echo "<div class='missing-card' style='border-left: 5px solid var(--danger); background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch;'>
+                                <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
+                                    <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover;'>
                                 </div>
-                            </div>
-                        </div>";
-                    }
-                } else { 
-                    echo "<p style='color: #666; font-style: italic; background: white; padding: 15px; border-radius: 8px;'>No missing pets reported.</p>"; 
-                }
-                ?>
-            </div>
-
-            <!-- FOUND SECTION -->
-            <div id="feed-found" style="display: none;">
-                <?php
-                $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
-                
-                if($found_query && $found_query->rowCount() > 0) {
-                    while($row = $found_query->fetch(PDO::FETCH_ASSOC)){
-                        $map_query = urlencode($row['location'] . " Baguio City");
-                        $map_link = "https://www.google.com/maps/search/?api=1&query=" . $map_query;
-
-                        echo "<div class='missing-card' style='border-left: 5px solid var(--success); background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch; opacity: 0.85;'>
-                            <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
-                                <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover;'>
-                            </div>
-                            <div style='flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;'>
-                                <div>
-                                    <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;'>
-                                        <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'><del>" . htmlspecialchars($row['pet_name']) . "</del></h4>
-                                        <span style='background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>Found</span>
+                                <div style='flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;'>
+                                    <div>
+                                        <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;'>
+                                            <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'>" . htmlspecialchars($row['pet_name']) . "</h4>
+                                            <span style='background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>Missing</span>
+                                        </div>
+                                        <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>";
+                                        
+                                        if (!empty($row['description'])) {
+                                            echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
+                                        }
+                                        
+                                    echo "</div>
+                                    
+                                    <div style='margin-top: auto; border-top: 1px solid #eee; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;'>
+                                        <span style='font-size: 0.8rem; color: #777;'>Contact CVAO to report/claim:</span>
+                                        <a href='tel:0744435332' style='text-decoration:none; color:var(--primary-color); font-weight:bold; font-size: 0.9rem; background: #eef2f5; padding: 4px 10px; border-radius: 4px;'><i class='fas fa-phone'></i> (074) 443-5332</a>
                                     </div>
-                                    <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--success)'></i> " . htmlspecialchars($row['location']) . "</a></p>";
-                                    
-                                    if (!empty($row['description'])) {
-                                        echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
-                                    }
-                                    
-                                echo "</div>
-                                
-                                <div style='margin-top: auto; border-top: 1px solid #eee; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;'>
-                                    <span style='font-size: 0.8rem; color: #28a745; font-weight: bold;'><i class='fas fa-home'></i> Safely resolved!</span>
                                 </div>
-                            </div>
-                        </div>";
+                            </div>";
+                        }
+                    } else { 
+                        echo "<p style='color: #666; font-style: italic; background: white; padding: 15px; border-radius: 8px;'>No missing pets reported.</p>"; 
                     }
-                } else { 
-                    echo "<p style='color: #666; font-style: italic; background: white; padding: 15px; border-radius: 8px;'>No found pets reported recently.</p>"; 
-                }
-                ?>
+                    ?>
+                </div>
+
+                <div id="feed-found" style="display: none;">
+                    <?php
+                    $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
+                    
+                    if($found_query && $found_query->rowCount() > 0) {
+                        while($row = $found_query->fetch(PDO::FETCH_ASSOC)){
+                            $map_query = urlencode($row['location'] . " Baguio City");
+                            $map_link = "https://www.google.com/maps/search/?api=1&query=" . $map_query;
+
+                            echo "<div class='missing-card' style='border-left: 5px solid var(--success); background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch; opacity: 0.85;'>
+                                <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
+                                    <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover;'>
+                                </div>
+                                <div style='flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;'>
+                                    <div>
+                                        <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;'>
+                                            <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'><del>" . htmlspecialchars($row['pet_name']) . "</del></h4>
+                                            <span style='background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>Found</span>
+                                        </div>
+                                        <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--success)'></i> " . htmlspecialchars($row['location']) . "</a></p>";
+                                        
+                                        if (!empty($row['description'])) {
+                                            echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
+                                        }
+                                        
+                                    echo "</div>
+                                    
+                                    <div style='margin-top: auto; border-top: 1px solid #eee; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;'>
+                                        <span style='font-size: 0.80rem; color: #28a745; font-weight: bold;'><i class='fas fa-home'></i> Safely resolved!</span>
+                                    </div>
+                                </div>
+                            </div>";
+                        }
+                    } else { 
+                        echo "<p style='color: #666; font-style: italic; background: white; padding: 15px; border-radius: 8px;'>No found pets reported recently.</p>"; 
+                    }
+                    ?>
+                </div>
             </div>
         </div>
-    </div>
-
-    <script>
-    function switchLfTab(tabName) {
-        var btnMissing = document.getElementById('tab-btn-missing');
-        var btnFound = document.getElementById('tab-btn-found');
-        var feedMissing = document.getElementById('feed-missing');
-        var feedFound = document.getElementById('feed-found');
-        
-        if (tabName === 'missing') {
-            btnMissing.style.background = 'var(--danger)';
-            btnMissing.style.color = 'white';
-            btnFound.style.background = '#e2e6ea';
-            btnFound.style.color = '#333';
-            
-            feedMissing.style.display = 'block';
-            feedFound.style.display = 'none';
-        } else {
-            btnFound.style.background = 'var(--success)';
-            btnFound.style.color = 'white';
-            btnMissing.style.background = '#e2e6ea';
-            btnMissing.style.color = '#333';
-            
-            feedFound.style.display = 'block';
-            feedMissing.style.display = 'none';
-        }
-    }
-    </script>
-</section>
+    </section>
 
     <section id="shelters" class="container">
         <div class="section-header"><h2>Shelter</h2></div>
@@ -788,55 +738,51 @@ if (isset($_SESSION['user_id'])) {
                 <h3>Baguio City Vet Office <span class="status-badge <?php echo ($cvao_status=='Open')?'status-open':'status-full'; ?>"><?php echo $cvao_status; ?></span></h3>
                 <ul>
                     <li><i class="fas fa-map-marker-alt"></i> Slaughterhouse Cmpnd, Baguio</li>
-                                        <li><a href="tel:0744435332" style="color:inherit; text-decoration:none;"><i class="fas fa-phone"></i> (074) 443-5332</a></li>
+                    <li><a href="tel:0744435332" style="color:inherit; text-decoration:none;"><i class="fas fa-phone"></i> (074) 443-5332</a></li>
                     <li><i class="far fa-clock"></i> Mon - Fri, 8AM - 5PM</li>
                 </ul>
             </div>
         </div>
     </section>
 
-<section id="donate" class="container">
-<div class="content-box" style="max-width:800px; margin:0 auto 2rem auto; padding: 20px;">
-    
-    <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; margin-bottom: 25px; text-align: center;">
-        <strong><i class="fas fa-exclamation-triangle"></i> CVAO Policy Notice:</strong><br>
-        The Baguio City Veterinary and Agriculture Office strictly accepts <strong>IN-KIND DONATIONS ONLY</strong>. We do not accept monetary donations (cash, GCash, or bank transfers).
-    </div>
+    <section id="donate" class="container">
+        <div class="content-box" style="max-width:800px; margin:0 auto 2rem auto; padding: 20px;">
+            <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; margin-bottom: 25px; text-align: center;">
+                <strong><i class="fas fa-exclamation-triangle"></i> CVAO Policy Notice:</strong><br>
+                The Baguio City Veterinary and Agriculture Office strictly accepts <strong>IN-KIND DONATIONS ONLY</strong>. We do not accept monetary donations (cash, GCash, or bank transfers).
+            </div>
 
-    <h3 style="text-align:center; color:var(--primary-color); margin-bottom: 20px;"><i class="fas fa-box-open"></i> What We Currently Need</h3>
+            <h3 style="text-align:center; color:var(--primary-color); margin-bottom: 20px;"><i class="fas fa-box-open"></i> What We Currently Need</h3>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; text-align: left;">
-        
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-            <h4 style="color: var(--success); margin-top: 0;"><i class="fas fa-dog"></i> Food & Feeding</h4>
-            <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
-                <li>Adult Dog Food & Puppy Kibble</li>
-                <li>Adult Cat Food & Kitten Wet Food</li>
-                <li>Stainless Steel Feeding Bowls</li>
-            </ul>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; text-align: left;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
+                    <h4 style="color: var(--success); margin-top: 0;"><i class="fas fa-dog"></i> Food & Feeding</h4>
+                    <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
+                        <li>Adult Dog Food & Puppy Kibble</li>
+                        <li>Adult Cat Food & Kitten Wet Food</li>
+                        <li>Stainless Steel Feeding Bowls</li>
+                    </ul>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
+                    <h4 style="color: #17a2b8; margin-top: 0;"><i class="fas fa-pump-soap"></i> Shelter Supplies</h4>
+                    <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
+                        <li>Leashes, Collars, and Harnesses</li>
+                        <li>Old Towels and Blankets</li>
+                        <li>Pet Soap, Shampoo, and Cleaning Brushes</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee;">
+                <p style="color: #666; margin: 0;">
+                    <strong>Drop-off Location:</strong> Baguio CVAO Compound, Slaughterhouse Compound, Magsaysay Ave.
+                </p>
+            </div>
         </div>
-        
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-            <h4 style="color: #17a2b8; margin-top: 0;"><i class="fas fa-pump-soap"></i> Shelter Supplies</h4>
-            <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
-                <li>Leashes, Collars, and Harnesses</li>
-                <li>Old Towels and Blankets</li>
-                <li>Pet Soap, Shampoo, and Cleaning Brushes</li>
-            </ul>
-        </div>
+    </section>
 
-    </div>
-
-    <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee;">
-        <p style="color: #666; margin: 0;">
-            <strong>Drop-off Location:</strong> Baguio CVAO Compound, Slaughterhouse Compound, Magsaysay Ave.
-        </p>
-    </div>
-
-</div>
-            </section>
-
-<div id="adoptModal" class="modal">
+    <div id="adoptModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeAdoptModal()">×</span>
             <h3>Adopt <span id="adopt-pet-name"></span></h3>
@@ -883,37 +829,35 @@ if (isset($_SESSION['user_id'])) {
                     <input type="number" name="app_hours" required>
                 </div>
                 <div class="form-group" style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px;">
-    <h4 style="color: #003366; margin-bottom: 5px;">Required Documents</h4>
-    <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">Please upload clear images for verification.</p>
+                    <h4 style="color: #003366; margin-bottom: 5px;">Required Documents</h4>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">Please upload clear images for verification.</p>
 
-    <label style="display: block; margin-bottom: 5px;">1. Barangay Certificate</label>
-    <input type="file" name="barangay_cert" accept="image/*,.pdf" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                    <label style="display: block; margin-bottom: 5px;">1. Barangay Certificate</label>
+                    <input type="file" name="barangay_cert" accept="image/*,.pdf" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
 
-    <label style="display: block; margin-bottom: 5px;">2. Valid Government ID</label>
-    <input type="file" name="valid_id" accept="image/*,.pdf" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                    <label style="display: block; margin-bottom: 5px;">2. Valid Government ID</label>
+                    <input type="file" name="valid_id" accept="image/*,.pdf" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
 
-    <label style="display: block; margin-bottom: 5px;">3. Photo of Pet Cage or Secure Area</label>
-    <input type="file" name="cage_photo" accept="image/*" required style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
-</div>
+                    <label style="display: block; margin-bottom: 5px;">3. Photo of Pet Cage or Secure Area</label>
+                    <input type="file" name="cage_photo" accept="image/*" required style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
                 <button type="submit" name="submit_application" class="btn-primary">Submit Application</button>
             </form>
         </div>
     </div>
 
-    <?php if(isset($showQR)): ?>
-    <div id="qrModal" class="modal" style="display:flex;">
-        <div class="modal-content" style="text-align:center; background:#007dfe; color:white;">
-            <span class="close-modal" onclick="this.parentElement.parentElement.style.display='none'">×</span>
-            <h3>Scan GCash QR</h3>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=FurFinderDonation" style="margin:20px; border-radius:8px;">
-        </div>
-    </div>
-    <?php endif; ?>
-
     <script>
         window.addEventListener('load', () => {
             const loader = document.getElementById('loader');
             setTimeout(() => { loader.style.opacity = '0'; setTimeout(() => { loader.style.display = 'none'; }, 500); }, 1500);
+
+            // Restrict datetime-local input to today/past (no future dates)
+            const tzOffset = new Date().getTimezoneOffset() * 60000;
+            const localISOTime = new Date(Date.now() - tzOffset).toISOString().slice(0, 16);
+            const datetimeInput = document.getElementById('lf_time_input');
+            if (datetimeInput) {
+                datetimeInput.max = localISOTime;
+            }
         });
 
         function showPage(pageId) {
@@ -923,11 +867,9 @@ if (isset($_SESSION['user_id'])) {
             const link = document.getElementById('nav-' + pageId);
             if(link) link.classList.add('active');
             
-            // NEW: Automatically close mobile navigation when a link is clicked
             document.getElementById('nav-links').classList.remove('active-nav');
         }
 
-        // NEW: Function to toggle mobile menu open/closed
         function toggleMobileNav() {
             document.getElementById('nav-links').classList.toggle('active-nav');
         }
@@ -963,7 +905,31 @@ if (isset($_SESSION['user_id'])) {
             } else { alert('Link copied!'); }
         }
 
-        // Initialize Tab
+        function switchLfTab(tabName) {
+            var btnMissing = document.getElementById('tab-btn-missing');
+            var btnFound = document.getElementById('tab-btn-found');
+            var feedMissing = document.getElementById('feed-missing');
+            var feedFound = document.getElementById('feed-found');
+            
+            if (tabName === 'missing') {
+                btnMissing.style.background = 'var(--danger)';
+                btnMissing.style.color = 'white';
+                btnFound.style.background = '#e2e6ea';
+                btnFound.style.color = '#333';
+                
+                feedMissing.style.display = 'block';
+                feedFound.style.display = 'none';
+            } else {
+                btnFound.style.background = 'var(--success)';
+                btnFound.style.color = 'white';
+                btnMissing.style.background = '#e2e6ea';
+                btnMissing.style.color = '#333';
+                
+                feedFound.style.display = 'block';
+                feedMissing.style.display = 'none';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => { showPage('<?php echo $activeTab; ?>'); });
     </script>
 </body>
