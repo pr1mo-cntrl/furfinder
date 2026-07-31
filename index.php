@@ -46,26 +46,47 @@ if (isset($_POST['submit_lost_report'])) {
     $contact = $_POST['lf_contact'];
     $desc = $_POST['lf_desc'];
     
-    $target_dir = "uploads/";
-    if (!file_exists($target_dir)) { mkdir($target_dir, 0777, true); }
-    
-    if (isset($_FILES["lf_photo"]["tmp_name"]) && !empty($_FILES["lf_photo"]["tmp_name"])) {
-        $check = getimagesize($_FILES["lf_photo"]["tmp_name"]);
-        if($check !== false) {
-            $file_name = basename($_FILES["lf_photo"]["name"]);
-            $target_file = $target_dir . time() . "_" . $file_name;
+    if (isset($_FILES["lf_photo"]) && $_FILES["lf_photo"]["error"] == 0) {
+        $file_tmp = $_FILES["lf_photo"]["tmp_name"];
+        $file_name = $_FILES["lf_photo"]["name"];
+        $file_ext = pathinfo($file_name, PATHINFO_EXTENSION);
+        $unique_filename = "lost_" . time() . "_" . uniqid() . "." . $file_ext;
+        
+        $supabase_url = trim(getenv('SUPABASE_URL') ?: $_SERVER['SUPABASE_URL'] ?? '');
+        $supabase_key = trim(getenv('SUPABASE_SERVICE_KEY') ?: $_SERVER['SUPABASE_SERVICE_KEY'] ?? '');
+        
+        $storage_url = "$supabase_url/storage/v1/object/pet-photos/$unique_filename";
+        $file_data = file_get_contents($file_tmp);
+        
+        $ch = curl_init($storage_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $file_data);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Required for Render
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer $supabase_key",
+            "Content-Type: " . $_FILES["lf_photo"]["type"],
+            "x-upsert: true"
+        ]);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($http_code === 200 || $http_code === 201) {
+            $uid = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
+            $status = 'Missing';
+            $image_url = "$supabase_url/storage/v1/object/public/pet-photos/$unique_filename";
             
-            if (move_uploaded_file($_FILES["lf_photo"]["tmp_name"], $target_file)) {
-                $uid = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
-                $status = 'Missing';
-                
-                $stmt = $conn->prepare("INSERT INTO lost_pets (user_id, pet_name, location, last_seen, contact_number, description, photo_path, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$uid, $name, $loc, $time, $contact, $desc, $target_file, $status]);
-                
-                $_SESSION['flash_msg'] = "Alert Posted Successfully!";
-                header("Location: index.php?tab=lost");
-                exit();
-            }
+            $stmt = $conn->prepare("INSERT INTO lost_pets (user_id, pet_name, location, last_seen, contact_number, description, photo_path, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$uid, $name, $loc, $time, $contact, $desc, $image_url, $status]);
+            
+            $_SESSION['flash_msg'] = "Alert Posted Successfully!";
+            header("Location: index.php?tab=lost");
+            exit();
+        } else {
+            $error_details = json_encode($response);
+            echo "<script>alert('Supabase Error! Code: " . $http_code . " | Details: ' + " . $error_details . ");</script>";
         }
     }
 }
