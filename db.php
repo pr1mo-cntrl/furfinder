@@ -1,5 +1,5 @@
  <?php
-$uri = "postgresql://postgres:REDACTED_ROTATED@db.hmsmjxdkvaklpuvsrdfv.supabase.co:5432/postgres";
+$uri = "postgresql://postgres.hmsmjxdkvaklpuvsrdfv:[REDACTED_ROTATED]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres";
 
 $db_parsed = parse_url($uri);
 $host = $db_parsed['host'];
