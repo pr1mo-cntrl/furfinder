@@ -15,7 +15,6 @@ if (isset($_POST['mark_as_found'])) {
     $report_id = $_POST['report_id'];
     $current_user = $_SESSION['user_id'];
     
-    // FIX: Use PDO prepared statements instead of mysqli string interpolation
     $update_query = "UPDATE lost_pets SET status = 'Found' WHERE id = ? AND user_id = ?";
     $stmt = $conn->prepare($update_query);
     if ($stmt->execute([$report_id, $current_user])) {
@@ -30,7 +29,6 @@ if (isset($_POST['delete_own_report'])) {
     $report_id = $_POST['report_id'];
     $current_user = $_SESSION['user_id'];
     
-    // FIX: Use PDO prepared statements
     $delete_query = "DELETE FROM lost_pets WHERE id = ? AND user_id = ?";
     $stmt = $conn->prepare($delete_query);
     if ($stmt->execute([$report_id, $current_user])) {
@@ -61,7 +59,6 @@ if (isset($_POST['submit_lost_report'])) {
                 $uid = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
                 $status = 'Missing';
                 
-                // FIX: Remove bind_param (mysqli) and use execute array (PDO)
                 $stmt = $conn->prepare("INSERT INTO lost_pets (user_id, pet_name, location, last_seen, contact_number, description, photo_path, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$uid, $name, $loc, $time, $contact, $desc, $target_file, $status]);
                 
@@ -108,7 +105,6 @@ if (isset($_POST['submit_application'])) {
         move_uploaded_file($_FILES['cage_photo']['tmp_name'], $cage_path);
     }
 
-    // FIX: Secure PDO execution for insertion
     $sql = "INSERT INTO applications (pet_name, user_id, fullname, contact, address, housing_type, has_fence, household_members, other_pets, income_source, hours_alone, barangay_cert, valid_id, cage_photo, status) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')";
     $stmt = $conn->prepare($sql);
@@ -126,7 +122,6 @@ if (isset($_POST['submit_donation'])) {
     $damt = $_POST['donor_amount'];
     $dmsg = $_POST['donor_message'];
     
-    // FIX: Remove bind_param (mysqli) and use execute array (PDO)
     $stmt = $conn->prepare("INSERT INTO donations (donor_name, amount, message) VALUES (?, ?, ?)");
     $stmt->execute([$dname, $damt, $dmsg]);
     $showQR = true; 
@@ -137,14 +132,12 @@ $fundraiser_target = 50000;
 $total_raised_query = $conn->query("SELECT SUM(amount) FROM donations");
 $total_raised = 0;
 if ($total_raised_query) {
-    // FIX: Safe array checking
     $row = $total_raised_query->fetch();
     $total_raised = $row[0] ? $row[0] : 0; 
 }
 
-// Calculate percentage for the bar width
 $progress_percent = ($total_raised / $fundraiser_target) * 100;
-if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
+if ($progress_percent > 100) $progress_percent = 100; 
 ?>
 
 <!DOCTYPE html>
@@ -170,42 +163,19 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Open Sans', sans-serif; }
-        body { background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; padding-bottom: 50px; }
+        body { background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; padding-bottom: 50px; overflow-x: hidden; }
 
         /* LOADING SCREEN STYLES */
         #loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--primary-color);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--primary-color); z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
             transition: opacity 0.5s ease-out;
         }
-        .paw-print {
-            color: var(--accent-color);
-            font-size: 4rem;
-            animation: bounce 1s infinite alternate;
-        }
-        #loader h2 {
-            color: white;
-            margin-top: 20px;
-            font-size: 2rem;
-            opacity: 0;
-            animation: fadeInText 1s ease-in forwards 0.5s;
-        }
-        @keyframes bounce {
-            from { transform: translateY(0); }
-            to { transform: translateY(-20px); }
-        }
-        @keyframes fadeInText {
-            to { opacity: 1; }
-        }
+        .paw-print { color: var(--accent-color); font-size: 4rem; animation: bounce 1s infinite alternate; }
+        #loader h2 { color: white; margin-top: 20px; font-size: 2rem; opacity: 0; animation: fadeInText 1s ease-in forwards 0.5s; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-20px); } }
+        @keyframes fadeInText { to { opacity: 1; } }
 
         /* NAV */
         nav { background-color: var(--primary-color); color: var(--white); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
@@ -214,7 +184,10 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
         .nav-links { list-style: none; display: flex; gap: 20px; align-items: center; }
         .nav-links a { color: white; text-decoration: none; font-weight: 600; padding: 8px 12px; border-radius: 4px; transition: var(--transition); cursor: pointer; }
         .nav-links a:hover, .nav-links a.active { background-color: rgba(255,255,255,0.15); color: var(--accent-color); }
-        .auth-btn { background: var(--accent-color); color: var(--primary-color) !important; padding: 8px 20px !important; border-radius: 20px; }
+        .auth-btn { background: var(--accent-color); color: var(--primary-color) !important; padding: 8px 20px !important; border-radius: 20px; text-align: center; }
+        
+        /* NEW: Hamburger Menu Icon */
+        .menu-toggle { display: none; font-size: 1.8rem; cursor: pointer; color: white; }
 
         /* LAYOUT */
         .container { max-width: 1100px; margin: 2rem auto; padding: 0 20px; display: none; }
@@ -222,6 +195,7 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         h1, h2, h3 { color: var(--primary-color); margin-bottom: 1rem; }
         .section-header { text-align: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #ddd; }
+        img { max-width: 100%; height: auto; }
 
         /* HERO */
         .hero { background: linear-gradient(rgba(0,51,102,0.7), rgba(0,51,102,0.7)), url('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80'); background-size: cover; background-position: center; padding: 4rem 2rem; border-radius: 8px; text-align: center; margin-bottom: 2rem; color: white; }
@@ -234,7 +208,7 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
         .req-list li { margin-bottom: 15px; list-style: none; padding-left: 1.5rem; position: relative; }
         .req-list li::before { content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900; color: var(--success); position: absolute; left: 0; top: 3px; }
 
-        /* FAQ STYLE (NEW) */
+        /* FAQ STYLE */
         .faq-box { margin-top: 2rem; }
         .faq-item { border-bottom: 1px solid #eee; padding: 15px 0; }
         .faq-item h4 { color: var(--primary-color); margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
@@ -261,6 +235,7 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
         .missing-card { background: white; padding: 1rem; border-radius: 8px; border-left: 5px solid var(--danger); display: flex; gap: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); align-items: flex-start; }
         .missing-img-container { width: 100px; height: 100px; background: #eee; border-radius: 8px; flex-shrink: 0; overflow: hidden; }
         .missing-img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .active-report-card { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
 
         /* SHELTERS */
         .shelter-card { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 2rem; display: flex; gap: 2rem; align-items: flex-start; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
@@ -282,18 +257,48 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
         .modal-content { background-color: #fefefe; padding: 2rem; border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; animation: fadeIn 0.3s; }
         .close-modal { float: right; font-size: 28px; cursor: pointer; color: #aaa; position: absolute; right: 20px; top: 15px; }
 
-        .ordinance-box {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border-left: 5px solid var(--accent-color);
-        }
-
+        /* =========================================================
+           NEW RESPONSIVE MEDIA QUERIES FOR PHONES AND TABLETS 
+           ========================================================= */
         @media (max-width: 768px) {
+            /* Mobile Navbar */
+            .menu-toggle { display: block; }
+            nav { padding: 1rem; }
+            .nav-links { 
+                display: none; 
+                flex-direction: column; 
+                width: 100%; 
+                position: absolute; 
+                top: 100%; 
+                left: 0; 
+                background-color: var(--primary-color); 
+                padding: 10px 0; 
+                box-shadow: 0 4px 6px rgba(0,0,0,0.2); 
+            }
+            .nav-links.active-nav { display: flex; }
+            .nav-links li { width: 100%; text-align: center; margin: 5px 0; }
+            .nav-links a { display: inline-block; width: 90%; }
+            
+            /* Responsive Content Adjustments */
+            .hero { padding: 2rem 1rem; }
+            .hero h1 { font-size: 1.8rem; }
+            .content-box, .ordinance-box { padding: 1.5rem; }
+            
+            /* Layout Grids */
             .lf-layout { grid-template-columns: 1fr; }
             .shelter-card { flex-direction: column; align-items: center; text-align: center; }
-            .nav-links { gap: 10px; font-size: 0.9rem; }
+            .missing-card { flex-direction: column; align-items: center; text-align: center; }
+            .missing-img-container { width: 100%; height: 200px; }
+            
+            /* Active Reports Adjustments */
+            .active-report-card { flex-direction: column; text-align: center; width: 100%; }
+            .active-report-actions { justify-content: center; width: 100%; margin-top: 10px; }
+            .active-report-actions form { width: 48%; }
+            .active-report-actions button { width: 100%; }
+            
+            /* Search Filters */
+            form[method="GET"] { flex-direction: column; }
+            form[method="GET"] input, form[method="GET"] select, form[method="GET"] button { width: 100%; }
         }
     </style>
 </head>
@@ -306,7 +311,10 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
 
     <nav>
         <div class="logo"><i class="fas fa-paw"></i> FurFinder</div>
-        <ul class="nav-links">
+        <!-- Hamburger Menu Button -->
+        <div class="menu-toggle" onclick="toggleMobileNav()"><i class="fas fa-bars"></i></div>
+        
+        <ul class="nav-links" id="nav-links">
             <li><a onclick="showPage('home')" id="nav-home" class="active">Home</a></li>
             <li><a onclick="showPage('shelters')" id="nav-shelters">Shelter</a></li>
             <li><a onclick="showPage('donate')" id="nav-donate">In-Kind Donations</a></li>
@@ -315,7 +323,7 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
                 <li><a onclick="showPage('adopt')" id="nav-adopt">Adopt</a></li>
                 <li><a onclick="showPage('lost')" id="nav-lost">Lost & Found</a></li>
                 
-                <li style="color:var(--accent-color); margin-left:10px;">Hi, <?php echo htmlspecialchars(isset($_SESSION['name']) ? $_SESSION['name'] : 'User'); ?></li>
+                <li style="color:var(--accent-color); margin:10px 0;">Hi, <?php echo htmlspecialchars(isset($_SESSION['name']) ? $_SESSION['name'] : 'User'); ?></li>
                 <li><a href="logout.php" class="auth-btn">Logout</a></li>
             <?php else: ?>
                 <li><a href="login.php" class="auth-btn">Login / Signup</a></li>
@@ -342,19 +350,18 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
         }, 5000);
     </script>
     <?php unset($_SESSION['flash_msg']); endif; ?> 
+
     <?php
 // 1. Handle dismiss actions for Approved or Rejected applications
 if (isset($_POST['dismiss_notification'])) {
     $app_id_to_dismiss = $_POST['app_id'];
     
-    // Fetch current status to preserve it (e.g., 'Approved' becomes 'Approved_Seen')
     $result = $conn->query("SELECT status FROM applications WHERE id = '$app_id_to_dismiss'");
     if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
         $new_status = $row['status'] . '_Seen';
         $conn->query("UPDATE applications SET status = '$new_status' WHERE id = '$app_id_to_dismiss'");
     }
     
-    // Refresh the page
     echo "<script>window.location.href='index.php';</script>";
 }
 
@@ -362,26 +369,20 @@ if (isset($_POST['dismiss_notification'])) {
 if (isset($_SESSION['user_id'])) {
     $current_user_id = $_SESSION['user_id']; 
     
-    // Fetch ALL active applications for this user (Pending, Approved, or Rejected)
     $check_status = $conn->query("SELECT * FROM applications WHERE user_id = '$current_user_id' AND status IN ('Pending', 'Approved', 'Rejected')");
 
-    // FIX: Changed num_rows to rowCount() for PDO
     if ($check_status && $check_status->rowCount() > 0) {
-        
-        // Loop through their applications and show the right box based on the status
         while ($app = $check_status->fetch(PDO::FETCH_ASSOC)) {
             $app_id = $app['id'];
             $status = $app['status'];
 
             if ($status == 'Pending') {
-                // PENDING NOTIFICATION
                 echo '
                 <div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 20px; width: 90%; margin-left: auto; margin-right: auto; text-align: center; font-family: sans-serif;">
                     <strong>⏳ Application Pending:</strong> Your adoption application is currently under review by the CVAO team. We will update you here as soon as a decision is made!
                 </div>';
             } 
             elseif ($status == 'Approved') {
-                // APPROVED NOTIFICATION
                 echo '
                 <div style="background-color: #d4edda; color: #155724; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb; margin-bottom: 20px; width: 90%; margin-left: auto; margin-right: auto; text-align: center; font-family: sans-serif;">
                     <h3 style="margin-top: 0;">🎉 Application Approved!</h3>
@@ -393,7 +394,6 @@ if (isset($_SESSION['user_id'])) {
                 </div>';
             }
             elseif ($status == 'Rejected') {
-                // REJECTED NOTIFICATION
                 echo '
                 <div style="background-color: #f8d7da; color: #721c24; padding: 20px; border-radius: 8px; border: 1px solid #f5c6cb; margin-bottom: 20px; width: 90%; margin-left: auto; margin-right: auto; text-align: center; font-family: sans-serif;">
                     <h3 style="margin-top: 0;">❌ Application Update</h3>
@@ -486,17 +486,14 @@ if (isset($_SESSION['user_id'])) {
 
         <div style="margin-bottom: 30px; display: flex; justify-content: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
             <form method="GET" style="display: flex; gap: 10px; width: 100%; max-width: 800px; flex-wrap: wrap;">
-                <!-- 1. Search Bar -->
                 <input type="text" name="search" placeholder="Search by name or breed..." value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px; flex-grow: 1; min-width: 200px;">
                 
-                <!-- 2. Type Filter -->
                 <select name="type_filter" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 120px;">
                     <option value="">All Types</option>
                     <option value="dog" <?php if(isset($_GET['type_filter']) && $_GET['type_filter'] == 'dog') echo 'selected'; ?>>Dogs</option>
                     <option value="cat" <?php if(isset($_GET['type_filter']) && $_GET['type_filter'] == 'cat') echo 'selected'; ?>>Cats</option>
                 </select>
 
-                <!-- 3. NEW: Age Filter -->
                 <select name="age_filter" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
                     <option value="">All Ages</option>
                     <option value="0-6" <?php if(isset($_GET['age_filter']) && $_GET['age_filter'] == '0-6') echo 'selected'; ?>>Puppy / Kitten</option>
@@ -511,7 +508,6 @@ if (isset($_SESSION['user_id'])) {
 
         <div class="pet-grid">
             <?php
-            // --- DYNAMIC QUERY WITH NEW FILTERS ---
             $sql = "SELECT * FROM pets WHERE status='available' AND is_archived = 0";
             
             if (isset($_GET['search']) && !empty($_GET['search'])) {
@@ -524,19 +520,17 @@ if (isset($_SESSION['user_id'])) {
             }
             if (isset($_GET['age_filter']) && !empty($_GET['age_filter'])) {
                 $age = $conn->real_escape_string($_GET['age_filter']);
-                $sql .= " AND age LIKE '%$age%'"; // Will match 'Young', 'Adult', 'Senior', or '0-6'
+                $sql .= " AND age LIKE '%$age%'"; 
             }
             
             $result = $conn->query($sql);
 
             if($result && $result->rowCount() > 0){
                 while($row = $result->fetch(PDO::FETCH_ASSOC)){
-                    // Automatically grab the first word (Puppy, Kitten, Young, Adult, Senior) for the badge
                     $age_parts = explode(' ', $row['age']);
                     $badge_text = !empty($age_parts[0]) ? htmlspecialchars($age_parts[0]) : 'New';
                     $badge = "<span class='badge-new'>{$badge_text}</span>";
                     
-                    // Safely grab the new fields (with fallbacks if empty)
                     $backstory = !empty($row['backstory']) ? htmlspecialchars($row['backstory']) : "This pet is still waiting to tell their story!";
                     $medical = !empty($row['medical_history']) ? htmlspecialchars($row['medical_history']) : "Standard health check completed.";
 
@@ -547,7 +541,6 @@ if (isset($_SESSION['user_id'])) {
                             <h3 style='margin-bottom: 3px;'>" . htmlspecialchars($row['name']) . "</h3>
                             <p style='color: #666; font-size: 0.9rem; margin-bottom: 12px; font-weight: 600;'>" . htmlspecialchars($row['breed']) . " • " . htmlspecialchars($row['age']) . "</p>
                             
-                            <!-- NEW: Expandable Story Section -->
                             <details style='margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eaeaea;'>
                                 <summary style='cursor: pointer; font-weight: bold; color: var(--primary-color); outline: none; font-size: 0.9rem;'>
                                     <i class='fas fa-book-open'></i> Read My Story
@@ -586,17 +579,16 @@ if (isset($_SESSION['user_id'])) {
                 $my_uid = $_SESSION['user_id'];
                 $my_reports = $conn->query("SELECT * FROM lost_pets WHERE user_id = '$my_uid' AND status = 'Missing'");
                 
-                // FIX: Changed num_rows to rowCount() for PDO
                 if($my_reports && $my_reports->rowCount() > 0) {
                     while($my_row = $my_reports->fetch(PDO::FETCH_ASSOC)) {
                     ?>
-                    <div style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; min-width: 300px; margin-bottom: 10px;">
+                    <div class="active-report-card">
                         <img src="<?php echo $my_row['photo_path']; ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
                         <div style="flex-grow: 1;">
                             <strong style="color: var(--danger);"><?php echo htmlspecialchars($my_row['pet_name']); ?></strong><br>
                             <span style="font-size: 0.85rem; color: #666;">Reported Missing</span>
                         </div>
-                        <div style="display: flex; gap: 8px;">
+                        <div class="active-report-actions" style="display: flex; gap: 8px;">
                             <form method="POST" style="margin: 0;">
                                 <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
                                 <button type="submit" name="mark_as_found" class="btn-primary" style="background: var(--success); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to mark this pet as found?');">
@@ -643,7 +635,6 @@ if (isset($_SESSION['user_id'])) {
                 <?php
                 $lost = $conn->query("SELECT * FROM lost_pets ORDER BY id DESC");
                 
-                // FIX: Changed num_rows to rowCount() for PDO
                 if($lost && $lost->rowCount() > 0) {
                     while($row = $lost->fetch(PDO::FETCH_ASSOC)){
                         $status = $row['status']; 
@@ -659,7 +650,6 @@ if (isset($_SESSION['user_id'])) {
                             <h4 style='color: {$text_color};'>{$status}: " . htmlspecialchars($row['pet_name']) . "</h4>
                             <p><a href='$map_link' target='_blank' style='text-decoration:none; color:#555;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>
                             
-                            <!-- NEW: Added the description output here -->
                             <p style='font-size: 0.9rem; color: #444; margin: 8px 0; font-style: italic;'>" . htmlspecialchars($row['description']) . "</p>
                             
                             <p style='font-size: 0.85rem; color: #666; margin-bottom: 2px;'>Found this pet? Contact CVAO:</p>
@@ -696,7 +686,6 @@ if (isset($_SESSION['user_id'])) {
 <section id="donate" class="container">
 <div class="content-box" style="max-width:800px; margin:0 auto 2rem auto; padding: 20px;">
     
-    <!-- CVAO Strict Policy Warning -->
     <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; margin-bottom: 25px; text-align: center;">
         <strong><i class="fas fa-exclamation-triangle"></i> CVAO Policy Notice:</strong><br>
         The Baguio City Veterinary and Agriculture Office strictly accepts <strong>IN-KIND DONATIONS ONLY</strong>. We do not accept monetary donations (cash, GCash, or bank transfers).
@@ -704,7 +693,6 @@ if (isset($_SESSION['user_id'])) {
 
     <h3 style="text-align:center; color:var(--primary-color); margin-bottom: 20px;"><i class="fas fa-box-open"></i> What We Currently Need</h3>
 
-    <!-- List of Accepted Items -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; text-align: left;">
         
         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
@@ -727,7 +715,6 @@ if (isset($_SESSION['user_id'])) {
 
     </div>
 
-    <!-- Drop-off Instructions -->
     <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee;">
         <p style="color: #666; margin: 0;">
             <strong>Drop-off Location:</strong> Baguio CVAO Compound, Slaughterhouse Compound, Magsaysay Ave.
@@ -823,6 +810,14 @@ if (isset($_SESSION['user_id'])) {
             document.getElementById(pageId).classList.add('active');
             const link = document.getElementById('nav-' + pageId);
             if(link) link.classList.add('active');
+            
+            // NEW: Automatically close mobile navigation when a link is clicked
+            document.getElementById('nav-links').classList.remove('active-nav');
+        }
+
+        // NEW: Function to toggle mobile menu open/closed
+        function toggleMobileNav() {
+            document.getElementById('nav-links').classList.toggle('active-nav');
         }
 
         function toggleFaq(element) {
