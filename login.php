@@ -1,24 +1,24 @@
+<?php
 prepare("INSERT INTO users (name, email, password, role, barangay, age_group, current_pets_status, preferred_breed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         if ($stmt->execute([$name, $email, $pass, $role, $barangay, $age_group, $current_pets, $pref_breed])) {
-            echo "";
+            echo "<" . "script>alert('Registration Successful! Please Login.');";
         }
     } catch (PDOException $e) {
-        echo "";
+        echo "<" . "script>alert('Registration Error');";
     }
 }
 
 // HANDLE LOGIN
 if (isset($_POST['login'])) {
-    $email = strtolower(trim($_POST['email'])); // Force lowercase
+    $email = strtolower(trim($_POST['email']));
     $password = $_POST['password'];
 
     try {
-        // Proper PDO Prepared Statement
         $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
         $stmt->execute([$email]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($row) { // If a row was found (replaces rowCount > 0)
+        if ($row) {
             if (password_verify($password, $row['password'])) {
                 session_regenerate_id(true);
                 $_SESSION['user_id'] = $row['id'];
@@ -27,19 +27,19 @@ if (isset($_POST['login'])) {
 
                 if ($row['role'] == 'admin') {
                     header("Location: admin.php");
-                    exit(); // Always exit after a header redirect
+                    exit();
                 } else {
                     header("Location: index.php");
                     exit();
                 }
             } else {
-                echo "";
+                echo "<" . "script>alert('Invalid Password');";
             }
         } else {
-            echo "";
+            echo "<" . "script>alert('User not found');";
         }
     } catch (PDOException $e) {
-        echo "";
+        echo "<" . "script>alert('Database Error');";
     }
 }
 ?>
