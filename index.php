@@ -653,22 +653,21 @@ if (isset($_SESSION['user_id'])) {
             </div>
             <div class="missing-feed">
                 <h3>Recent Reports</h3>
-                <?php
-                $lost = $conn->query("SELECT * FROM lost_pets ORDER BY id DESC");
                 
-                if($lost && $lost->rowCount() > 0) {
-                    while($row = $lost->fetch(PDO::FETCH_ASSOC)){
-                        $status = $row['status']; 
-                        
-                        // Set colors for the left border and the status badge
-                        $border_color = ($status == 'Found') ? "var(--success)" : "var(--danger)";
-                        $badge_bg = ($status == 'Found') ? "#d4edda" : "#f8d7da";
-                        $badge_text = ($status == 'Found') ? "#155724" : "#721c24";
-                        
+                <!-- MISSING SECTION -->
+                <h4 style="color: var(--danger); border-bottom: 2px solid var(--danger); padding-bottom: 8px; margin-bottom: 15px; margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-search"></i> Still Missing
+                </h4>
+                
+                <?php
+                $missing_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' ORDER BY id DESC");
+                
+                if($missing_query && $missing_query->rowCount() > 0) {
+                    while($row = $missing_query->fetch(PDO::FETCH_ASSOC)){
                         $map_query = urlencode($row['location'] . " Baguio City");
                         $map_link = "https://www.google.com/maps/search/?api=1&query=" . $map_query;
 
-                        echo "<div class='missing-card' style='border-left: 5px solid {$border_color}; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch;'>
+                        echo "<div class='missing-card' style='border-left: 5px solid var(--danger); background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch;'>
                             <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
                                 <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover;'>
                             </div>
@@ -676,12 +675,11 @@ if (isset($_SESSION['user_id'])) {
                                 <div>
                                     <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;'>
                                         <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'>" . htmlspecialchars($row['pet_name']) . "</h4>
-                                        <span style='background: {$badge_bg}; color: {$badge_text}; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>" . htmlspecialchars($status) . "</span>
+                                        <span style='background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>Missing</span>
                                     </div>
                                     <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>
                                     ";
                                     
-                                    // Wrap the description in a stylized quote box
                                     if (!empty($row['description'])) {
                                         echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
                                     }
@@ -695,7 +693,52 @@ if (isset($_SESSION['user_id'])) {
                             </div>
                         </div>";
                     }
-                } else { echo "<p>No lost pets reported.</p>"; }
+                } else { 
+                    echo "<p style='color: #666; font-style: italic; background: white; padding: 15px; border-radius: 8px;'>No missing pets reported.</p>"; 
+                }
+                ?>
+
+                <!-- FOUND SECTION -->
+                <h4 style="color: var(--success); border-bottom: 2px solid var(--success); padding-bottom: 8px; margin-bottom: 15px; margin-top: 30px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-check-circle"></i> Reunited & Found
+                </h4>
+
+                <?php
+                $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
+                
+                if($found_query && $found_query->rowCount() > 0) {
+                    while($row = $found_query->fetch(PDO::FETCH_ASSOC)){
+                        $map_query = urlencode($row['location'] . " Baguio City");
+                        $map_link = "https://www.google.com/maps/search/?api=1&query=" . $map_query;
+
+                        echo "<div class='missing-card' style='border-left: 5px solid var(--success); background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch; opacity: 0.85;'>
+                            <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
+                                <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover;'>
+                            </div>
+                            <div style='flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;'>
+                                <div>
+                                    <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;'>
+                                        <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'><del>" . htmlspecialchars($row['pet_name']) . "</del></h4>
+                                        <span style='background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>Found</span>
+                                    </div>
+                                    <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--success)'></i> " . htmlspecialchars($row['location']) . "</a></p>
+                                    ";
+                                    
+                                    if (!empty($row['description'])) {
+                                        echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
+                                    }
+                                    
+                                echo "</div>
+                                
+                                <div style='margin-top: auto; border-top: 1px solid #eee; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;'>
+                                    <span style='font-size: 0.8rem; color: #28a745; font-weight: bold;'><i class='fas fa-home'></i> Safely resolved!</span>
+                                </div>
+                            </div>
+                        </div>";
+                    }
+                } else { 
+                    echo "<p style='color: #666; font-style: italic; background: white; padding: 15px; border-radius: 8px;'>No found pets reported recently.</p>"; 
+                }
                 ?>
             </div>
     </section>
