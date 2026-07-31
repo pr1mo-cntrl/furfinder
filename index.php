@@ -430,7 +430,7 @@ if (isset($_SESSION['user_id'])) {
                 <i class="fas fa-home fa-2x" style="color: var(--success); margin-bottom: 10px;"></i>
                 <h3 style="margin:0; font-size: 2rem;">
                     <?php 
-                        $adoptions = $conn->query("SELECT COUNT(*) FROM applications WHERE status='Approved'")->fetch_row()[0];
+                        $adoptions = $conn->query("SELECT COUNT(*) FROM applications WHERE status='Approved'")->fetch()[0];
                         echo $adoptions + 12; 
                     ?>
                 </h3>
