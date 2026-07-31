@@ -38,6 +38,10 @@ if (isset($_POST['add_pet'])) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_POSTFIELDS, $file_data);
+        
+        // CRITICAL FIX: Bypass strict SSL verification for Render's environment
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+        
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             "Authorization: Bearer $supabase_key",
             "Content-Type: " . $_FILES["pet_photo"]["type"],
@@ -57,8 +61,9 @@ if (isset($_POST['add_pet'])) {
             header("Location: admin.php");
             exit();
         } else {
-            $error_details = addslashes($response);
-            echo "<script>alert('Error uploading image to Supabase Storage.');</script>";
+            // Safe JSON encoding for JS alerts
+            $error_details = json_encode($response);
+            echo "<script>alert('Supabase Error! Code: " . $http_code . " | Details: ' + " . $error_details . ");</script>";
         }
     }
 }
@@ -359,7 +364,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             <div class="card" style="border-left-color: var(--danger);">
                 <h3>Lost Reports</h3>
                 <p style="color: var(--danger);">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='Missing'")->fetchColumn() ?: 0; ?>
+                    <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE LOWER(status)='missing'")->fetchColumn() ?: 0; ?>
                 </p>
             </div>
         </div>
