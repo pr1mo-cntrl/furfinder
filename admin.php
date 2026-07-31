@@ -185,7 +185,7 @@ $breed_labels = [];
 $breed_counts = [];
 $breed_res = $conn->query("SELECT breed, COUNT(*) as count FROM pets WHERE status='available' AND is_archived=0 GROUP BY breed ORDER BY count DESC LIMIT 5");
 if ($breed_res) {
-    while($row = $breed_res->fetch_assoc()) {
+    while($row = $breed_res->fetch(PDO::FETCH_ASSOC)) {
         $breed_labels[] = $row['breed'];
         $breed_counts[] = $row['count'];
     }
@@ -448,7 +448,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 <tbody>
                     <?php
                     $pets = $conn->query("SELECT * FROM pets WHERE is_archived = 0 ORDER BY id DESC");
-                    while($row = $pets->fetch_assoc()):
+                    while($row = $pets->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
                             <td><?php echo $row['id']; ?></td>
@@ -502,7 +502,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     // Query specifically for is_archived = 1
                     $archived_pets = $conn->query("SELECT * FROM pets WHERE is_archived = 1 ORDER BY id DESC");
                     if ($archived_pets && $archived_pets->num_rows > 0) {
-                        while($row = $archived_pets->fetch_assoc()):
+                        while($row = $archived_pets->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
                             <td><?php echo $row['id']; ?></td>
@@ -540,7 +540,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     // Query specifically for is_archived = 1
                     $archived_apps = $conn->query("SELECT * FROM applications WHERE is_archived = 1 ORDER BY id DESC");
                     if ($archived_apps && $archived_apps->num_rows > 0) {
-                        while($row = $archived_apps->fetch_assoc()):
+                        while($row = $archived_apps->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
                             <td><?php echo htmlspecialchars($row['pet_name']); ?></td>
@@ -617,7 +617,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 <tbody>
                     <?php
                     $apps = $conn->query("SELECT * FROM applications WHERE is_archived = 0 ORDER BY id DESC");
-                    while($row = $apps->fetch_assoc()):
+                    while($row = $apps->fetch(PDO::FETCH_ASSOC)):
                         $safeData = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
                         
                         // Strip out '_Seen' so the admin tabs still categorize them correctly!
@@ -729,7 +729,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 <tbody>
                     <?php
                     $lost = $conn->query("SELECT * FROM lost_pets ORDER BY id DESC");
-                    while($row = $lost->fetch_assoc()):
+                    while($row = $lost->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
                             <td><?php echo $row['pet_name']; ?></td>
@@ -778,7 +778,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 <tbody>
                     <?php
                     $shelters = $conn->query("SELECT * FROM shelters WHERE name != 'Furvent Animal Rescue'");
-                    while($row = $shelters->fetch_assoc()):
+                    while($row = $shelters->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
                             <td><?php echo $row['name']; ?></td>
@@ -816,7 +816,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 <tbody>
                     <?php
                     $donations = $conn->query("SELECT * FROM donations ORDER BY date_created DESC");
-                    while($row = $donations->fetch_assoc()):
+                    while($row = $donations->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
                             <td><?php echo date('M d, Y', strtotime($row['date_created'])); ?></td>
