@@ -27,7 +27,7 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 
 // --- PHP HANDLERS ---
 
-// 1. Handle New Pet (With File Upload & Directory Check)
+// 1. Handle New Pet (Supabase Cloud Storage & PRG Redirect Fix)
 if (isset($_POST['add_pet'])) {
     $name = $_POST['name'];
     $breed = $_POST['breed'];
@@ -36,33 +36,44 @@ if (isset($_POST['add_pet'])) {
     $backstory = $_POST['backstory'];
     $medical_history = $_POST['medical_history'];
 
-    $target_dir = "uploads/";
-    if (!file_exists($target_dir)) { mkdir($target_dir, 0777, true); }
-    
     if (isset($_FILES["pet_photo"]) && $_FILES["pet_photo"]["error"] == 0) {
-        $check = getimagesize($_FILES["pet_photo"]["tmp_name"]);
-        if($check === false) { echo ""; exit(); }
-        if ($_FILES["pet_photo"]["size"] > 5000000) { echo ""; exit(); }
+        $file_tmp = $_FILES["pet_photo"]["tmp_name"];
+        $file_name = $_FILES["pet_photo"]["name"];
+        $file_ext = pathinfo($file_name, PATHINFO_EXTENSION);
+        $unique_filename = time() . "_" . uniqid() . "." . $file_ext;
         
-        $file_info = pathinfo($_FILES["pet_photo"]["name"]);
-        $file_extension = $file_info['extension'];
-        $unique_filename = time() . "_" . $file_info['filename'] . "." . $file_extension;
-        $target_file = $target_dir . $unique_filename;
-        $image_url = $target_file; 
-
-        if (!is_dir($target_dir)) {
-            mkdir($target_dir, 0777, true);
-        }
-
-        if (move_uploaded_file($_FILES["pet_photo"]["tmp_name"], $target_file)) {
+        $supabase_url = getenv('SUPABASE_URL');
+        $supabase_key = getenv('SUPABASE_SERVICE_KEY');
+        
+        $storage_url = "$supabase_url/storage/v1/object/pet-photos/$unique_filename";
+        $file_data = file_get_contents($file_tmp);
+        
+        $ch = curl_init($storage_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $file_data);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer $supabase_key",
+            "Content-Type: " . $_FILES["pet_photo"]["type"],
+            "x-upsert: true"
+        ]);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($http_code === 200 || $http_code === 201) {
+            $image_url = "$supabase_url/storage/v1/object/public/pet-photos/$unique_filename";
+            
             $stmt = $conn->prepare("INSERT INTO pets (name, breed, age, backstory, medical_history, image_url, type) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, $breed, $age, $backstory, $medical_history, $image_url, $type]);
-            echo "";
+            
+            // PREVENT DUPLICATE RESUBMISSION BUG UPON REFRESH
+            header("Location: admin.php");
+            exit();
         } else {
-            echo "";
+            echo "<script>alert('Error uploading image to Supabase Storage.');</script>";
         }
-    } else {
-         echo "";
     }
 }
 
