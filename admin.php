@@ -55,6 +55,11 @@ if (isset($_POST['add_pet'])) {
         $target_file = $target_dir . $unique_filename;
         $image_url = $target_file; 
 
+        $target_dir = "uploads/";
+        if (!is_dir($target_dir)) {
+            mkdir($target_dir, 0777, true);
+        }
+
         if (move_uploaded_file($_FILES["pet_photo"]["tmp_name"], $target_file)) {
             // UPDATED QUERY TO INCLUDE BACKSTORY AND MEDICAL HISTORY
             $stmt = $conn->prepare("INSERT INTO pets (name, breed, age, backstory, medical_history, image_url, type) VALUES (?, ?, ?, ?, ?, ?, ?)");
