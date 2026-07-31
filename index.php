@@ -342,7 +342,7 @@ if (isset($_POST['dismiss_notification'])) {
     
     // Fetch current status to preserve it (e.g., 'Approved' becomes 'Approved_Seen')
     $result = $conn->query("SELECT status FROM applications WHERE id = '$app_id_to_dismiss'");
-    if ($result && $row = $result->fetch_assoc()) {
+    if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
         $new_status = $row['status'] . '_Seen';
         $conn->query("UPDATE applications SET status = '$new_status' WHERE id = '$app_id_to_dismiss'");
     }
@@ -361,7 +361,7 @@ if (isset($_SESSION['user_id'])) {
     if ($check_status && $check_status->num_rows > 0) {
         
         // Loop through their applications and show the right box based on the status
-        while ($app = $check_status->fetch_assoc()) {
+        while ($app = $check_status->fetch(PDO::FETCH_ASSOC)) {
             $app_id = $app['id'];
             $status = $app['status'];
 
@@ -556,8 +556,8 @@ if (isset($_SESSION['user_id'])) {
             
             $result = $conn->query($sql);
 
-            if($result && $result->num_rows > 0){
-                while($row = $result->fetch_assoc()){
+            if($result && $result->rowCount() > 0){
+                while($row = $result->fetch(PDO::FETCH_ASSOC)){
                     // Automatically grab the first word (Puppy, Kitten, Young, Adult, Senior) for the badge
                     $age_parts = explode(' ', $row['age']);
                     $badge_text = !empty($age_parts[0]) ? htmlspecialchars($age_parts[0]) : 'New';
@@ -614,7 +614,7 @@ if (isset($_SESSION['user_id'])) {
                 $my_reports = $conn->query("SELECT * FROM lost_pets WHERE user_id = '$my_uid' AND status = 'Missing'");
                 
                 if($my_reports && $my_reports->num_rows > 0) {
-                    while($my_row = $my_reports->fetch_assoc()) {
+                    while($my_row = $my_reports->fetch(PDO::FETCH_ASSOC)) {
                     ?>
                     <div style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; min-width: 300px; margin-bottom: 10px;">
                         <img src="<?php echo $my_row['photo_path']; ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
@@ -669,7 +669,7 @@ if (isset($_SESSION['user_id'])) {
                 <?php
                 $lost = $conn->query("SELECT * FROM lost_pets ORDER BY id DESC");
                 if($lost && $lost->num_rows > 0) {
-                    while($row = $lost->fetch_assoc()){
+                    while($row = $lost->fetch(PDO::FETCH_ASSOC)){
                         $status = $row['status']; 
                         $border_color = ($status == 'Found') ? "var(--success)" : "var(--danger)";
                         $badge_color = ($status == 'Found') ? "#d4edda" : "white";
@@ -702,7 +702,7 @@ if (isset($_SESSION['user_id'])) {
         <?php
         $cvao_status = "Open";
         $cvao_res = $conn->query("SELECT status FROM shelters WHERE name LIKE '%Baguio%' LIMIT 1");
-        if($cvao_res && $r = $cvao_res->fetch_assoc()) $cvao_status = $r['status'];
+        if($cvao_res && $r = $cvao_res->fetch(PDO::FETCH_ASSOC)) $cvao_status = $r['status'];
         ?>
         <div class="shelter-card">
             <div class="shelter-logo"><img src="uploads/shelter_cvao.jpg" onerror="this.src='https://via.placeholder.com/100?text=Logo'"></div>
