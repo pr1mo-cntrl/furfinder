@@ -634,7 +634,75 @@ if (isset($_SESSION['user_id'])) {
         </div>
         <?php endif; ?>
 
-        <div class="missing-feed">
+        <section id="lost" class="container">
+        <div class="section-header">
+            <h2>Lost & Found</h2>
+        </div>
+
+        <?php if(isset($_SESSION['user_id'])): ?>
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; border-top: 4px solid var(--primary-color);">
+            <h3 style="margin-bottom: 15px; color: var(--primary-color);"><i class="fas fa-clipboard-list"></i> My Active Reports</h3>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                <?php
+                $my_uid = $_SESSION['user_id'];
+                $my_reports = $conn->query("SELECT * FROM lost_pets WHERE user_id = '$my_uid' AND status = 'Missing'");
+                
+                if($my_reports && $my_reports->rowCount() > 0) {
+                    while($my_row = $my_reports->fetch(PDO::FETCH_ASSOC)) {
+                    ?>
+                    <div class="active-report-card" style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                        <img src="<?php echo $my_row['photo_path']; ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
+                        <div style="flex-grow: 1;">
+                            <strong style="color: var(--danger);"><?php echo htmlspecialchars($my_row['pet_name']); ?></strong><br>
+                            <span style="font-size: 0.85rem; color: #666;">Reported Missing</span>
+                        </div>
+                        <div class="active-report-actions" style="display: flex; gap: 8px;">
+                            <form method="POST" style="margin: 0;">
+                                <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
+                                <button type="submit" name="mark_as_found" class="btn-primary" style="background: var(--success); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to mark this pet as found?');">
+                                    <i class="fas fa-check"></i> Found
+                                </button>
+                            </form>
+                            <form method="POST" style="margin: 0;">
+                                <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
+                                <button type="submit" name="delete_own_report" class="btn-primary" style="background: var(--danger); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to permanently delete this report?');">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <?php
+                }
+                } else {
+                    echo "<p style='color: #666; font-size: 0.9rem; margin: 0;'>You currently have no active missing pet reports.</p>";
+                }
+                ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div class="lf-layout">
+            <!-- LEFT COLUMN: REPORT FORM -->
+            <div class="report-form">
+                <h3>Report Missing Pet</h3>
+                <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; margin-bottom: 20px; text-align: center; font-size: 0.9rem;">
+                    <strong><i class="fas fa-user-lock"></i> Privacy Notice:</strong><br>
+                    Your contact information is kept strictly confidential. Only the <strong>CVAO Admin</strong> will be able to view your phone number to coordinate with you if your pet is found.
+                </div>
+                <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Are you sure you want to post this lost pet alert?');">
+                    <div class="form-group"><label>Pet Name</label><input type="text" name="lf_name" required></div>
+                    <div class="form-group"><label>Location Last Seen</label><input type="text" name="lf_location" required></div>
+                    <div class="form-group"><label>Time & Date Last Seen</label><input type="datetime-local" name="lf_time" required></div>
+                    <div class="form-group"><label>Contact No.</label><input type="tel" name="lf_contact" required></div>
+                    <div class="form-group"><label>Photo of Pet</label><input type="file" name="lf_photo" accept="image/*" required></div>
+                    <div class="form-group"><label>Description of Pet</label><textarea name="lf_desc"></textarea></div>
+                    <button type="submit" name="submit_lost_report" class="btn-primary">Post Alert</button>
+                </form>
+            </div>
+
+            <!-- RIGHT COLUMN: TABBED FEED -->
+            <div class="missing-feed">
                 <h3>Recent Reports</h3>
                 
                 <!-- TABS UI -->
@@ -667,8 +735,7 @@ if (isset($_SESSION['user_id'])) {
                                             <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'>" . htmlspecialchars($row['pet_name']) . "</h4>
                                             <span style='background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>Missing</span>
                                         </div>
-                                        <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>
-                                        ";
+                                        <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>";
                                         
                                         if (!empty($row['description'])) {
                                             echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
@@ -678,7 +745,7 @@ if (isset($_SESSION['user_id'])) {
                                     
                                     <div style='margin-top: auto; border-top: 1px solid #eee; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;'>
                                         <span style='font-size: 0.8rem; color: #777;'>Contact CVAO to report/claim:</span>
-                                        <a href='tel:0744435332' style='text-decoration:none; color:var(--primary-color); font-weight:bold; font-size: 0.9rem; background: #eef2f5; padding: 4px 10px; border-radius: 4px; transition: background 0.2s;' onmouseover=\"this.style.background='#dce4ec'\" onmouseout=\"this.style.background='#eef2f5'\"><i class='fas fa-phone'></i> (074) 443-5332</a>
+                                        <a href='tel:0744435332' style='text-decoration:none; color:var(--primary-color); font-weight:bold; font-size: 0.9rem; background: #eef2f5; padding: 4px 10px; border-radius: 4px; transition: background 0.2s;'><i class='fas fa-phone'></i> (074) 443-5332</a>
                                     </div>
                                 </div>
                             </div>";
@@ -709,8 +776,7 @@ if (isset($_SESSION['user_id'])) {
                                             <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'><del>" . htmlspecialchars($row['pet_name']) . "</del></h4>
                                             <span style='background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>Found</span>
                                         </div>
-                                        <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--success)'></i> " . htmlspecialchars($row['location']) . "</a></p>
-                                        ";
+                                        <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--success)'></i> " . htmlspecialchars($row['location']) . "</a></p>";
                                         
                                         if (!empty($row['description'])) {
                                             echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
@@ -758,6 +824,7 @@ if (isset($_SESSION['user_id'])) {
                 }
                 </script>
             </div>
+        </div>
     </section>
 
     <section id="shelters" class="container">
