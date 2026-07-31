@@ -15,8 +15,10 @@ if (isset($_POST['mark_as_found'])) {
     $report_id = $_POST['report_id'];
     $current_user = $_SESSION['user_id'];
     
-    $update_query = "UPDATE lost_pets SET status = 'Found' WHERE id = '$report_id' AND user_id = '$current_user'";
-    if ($conn->query($update_query) === TRUE) {
+    // FIX: Use PDO prepared statements instead of mysqli string interpolation
+    $update_query = "UPDATE lost_pets SET status = 'Found' WHERE id = ? AND user_id = ?";
+    $stmt = $conn->prepare($update_query);
+    if ($stmt->execute([$report_id, $current_user])) {
         $_SESSION['flash_msg'] = "Great news! Your pet has been marked as Found.";
         header("Location: index.php?tab=lost");
         exit();
@@ -28,9 +30,10 @@ if (isset($_POST['delete_own_report'])) {
     $report_id = $_POST['report_id'];
     $current_user = $_SESSION['user_id'];
     
-    // Security check: Only delete if the current user actually owns this post
-    $delete_query = "DELETE FROM lost_pets WHERE id = '$report_id' AND user_id = '$current_user'";
-    if ($conn->query($delete_query) === TRUE) {
+    // FIX: Use PDO prepared statements
+    $delete_query = "DELETE FROM lost_pets WHERE id = ? AND user_id = ?";
+    $stmt = $conn->prepare($delete_query);
+    if ($stmt->execute([$report_id, $current_user])) {
         $_SESSION['flash_msg'] = "Your lost pet report has been successfully deleted.";
         header("Location: index.php?tab=lost");
         exit();
@@ -57,9 +60,10 @@ if (isset($_POST['submit_lost_report'])) {
             if (move_uploaded_file($_FILES["lf_photo"]["tmp_name"], $target_file)) {
                 $uid = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
                 $status = 'Missing';
+                
+                // FIX: Remove bind_param (mysqli) and use execute array (PDO)
                 $stmt = $conn->prepare("INSERT INTO lost_pets (user_id, pet_name, location, last_seen, contact_number, description, photo_path, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->bind_param("isssssss", $uid, $name, $loc, $time, $contact, $desc, $target_file, $status);
-                $stmt->execute();
+                $stmt->execute([$uid, $name, $loc, $time, $contact, $desc, $target_file, $status]);
                 
                 $_SESSION['flash_msg'] = "Alert Posted Successfully!";
                 header("Location: index.php?tab=lost");
@@ -104,10 +108,12 @@ if (isset($_POST['submit_application'])) {
         move_uploaded_file($_FILES['cage_photo']['tmp_name'], $cage_path);
     }
 
+    // FIX: Secure PDO execution for insertion
     $sql = "INSERT INTO applications (pet_name, user_id, fullname, contact, address, housing_type, has_fence, household_members, other_pets, income_source, hours_alone, barangay_cert, valid_id, cage_photo, status) 
-            VALUES ('$pname', '$uid', '$fname', '$cont', '$addr', '$housing', '$fence', '$members', '$other_pets', '$income', '$hours', '$brgy_path', '$id_path', '$cage_path', 'Pending')";
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')";
+    $stmt = $conn->prepare($sql);
     
-    if ($conn->query($sql) === TRUE) {
+    if ($stmt->execute([$pname, $uid, $fname, $cont, $addr, $housing, $fence, $members, $other_pets, $income, $hours, $brgy_path, $id_path, $cage_path])) {
         $_SESSION['flash_msg'] = "Application submitted successfully! CVAO will notify you when approved.";
         header("Location: index.php?tab=adopt");
         exit();
@@ -120,9 +126,9 @@ if (isset($_POST['submit_donation'])) {
     $damt = $_POST['donor_amount'];
     $dmsg = $_POST['donor_message'];
     
+    // FIX: Remove bind_param (mysqli) and use execute array (PDO)
     $stmt = $conn->prepare("INSERT INTO donations (donor_name, amount, message) VALUES (?, ?, ?)");
-    $stmt->bind_param("sds", $dname, $damt, $dmsg);
-    $stmt->execute();
+    $stmt->execute([$dname, $damt, $dmsg]);
     $showQR = true; 
 }
 
@@ -131,8 +137,9 @@ $fundraiser_target = 50000;
 $total_raised_query = $conn->query("SELECT SUM(amount) FROM donations");
 $total_raised = 0;
 if ($total_raised_query) {
+    // FIX: Safe array checking
     $row = $total_raised_query->fetch();
-    $total_raised = $row[0] ? $row[0] : 0; // Default to 0 if null
+    $total_raised = $row[0] ? $row[0] : 0; 
 }
 
 // Calculate percentage for the bar width
@@ -308,7 +315,7 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
                 <li><a onclick="showPage('adopt')" id="nav-adopt">Adopt</a></li>
                 <li><a onclick="showPage('lost')" id="nav-lost">Lost & Found</a></li>
                 
-                <li style="color:var(--accent-color); margin-left:10px;">Hi, <?php echo htmlspecialchars($_SESSION['name']); ?></li>
+                <li style="color:var(--accent-color); margin-left:10px;">Hi, <?php echo htmlspecialchars(isset($_SESSION['name']) ? $_SESSION['name'] : 'User'); ?></li>
                 <li><a href="logout.php" class="auth-btn">Logout</a></li>
             <?php else: ?>
                 <li><a href="login.php" class="auth-btn">Login / Signup</a></li>
@@ -334,7 +341,7 @@ if ($progress_percent > 100) $progress_percent = 100; // Cap at 100%
             }
         }, 5000);
     </script>
-    <?php unset($_SESSION['flash_msg']); endif; ?> <!-- THIS IS THE IMPORTANT PART -->
+    <?php unset($_SESSION['flash_msg']); endif; ?> 
     <?php
 // 1. Handle dismiss actions for Approved or Rejected applications
 if (isset($_POST['dismiss_notification'])) {
@@ -358,7 +365,8 @@ if (isset($_SESSION['user_id'])) {
     // Fetch ALL active applications for this user (Pending, Approved, or Rejected)
     $check_status = $conn->query("SELECT * FROM applications WHERE user_id = '$current_user_id' AND status IN ('Pending', 'Approved', 'Rejected')");
 
-    if ($check_status && $check_status->num_rows > 0) {
+    // FIX: Changed num_rows to rowCount() for PDO
+    if ($check_status && $check_status->rowCount() > 0) {
         
         // Loop through their applications and show the right box based on the status
         while ($app = $check_status->fetch(PDO::FETCH_ASSOC)) {
@@ -424,41 +432,6 @@ if (isset($_SESSION['user_id'])) {
             <?php endif; ?>
             
         </div>
-        
-        <!-- <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: -30px 20px 30px 20px; position: relative; z-index: 10;">
-            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-bottom: 4px solid var(--success);">
-                <i class="fas fa-home fa-2x" style="color: var(--success); margin-bottom: 10px;"></i>
-                <h3 style="margin:0; font-size: 2rem;">
-                    <?php 
-                        $adoptions = $conn->query("SELECT COUNT(*) FROM applications WHERE status='Approved'")->fetch()[0];
-                        echo $adoptions + 12; 
-                    ?>
-                </h3>
-                <p style="color: #666; font-size: 0.9rem;">Happy Adoptions</p>
-            </div> -->
-
-            <!-- <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-bottom: 4px solid var(--danger);">
-                <i class="fas fa-search-location fa-2x" style="color: var(--danger); margin-bottom: 10px;"></i>
-                <h3 style="margin:0; font-size: 2rem;">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='Missing'")->fetch()[0]; ?>
-                </h3>
-                <p style="color: #666; font-size: 0.9rem;">Missing Pets</p>
-            </div>
-
-            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-bottom: 4px solid var(--primary-color);">
-                <i class="fas fa-users fa-2x" style="color: var(--primary-color); margin-bottom: 10px;"></i>
-                <h3 style="margin:0; font-size: 2rem;">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM users")->fetch()[0]; ?>
-                </h3>
-                <p style="color: #666; font-size: 0.9rem;">Registered Users</p>
-            </div>
-        </div>
-
-        <div class="content-box">
-            <h2>About FurFinder</h2>
-            <p>FurFinder is a dedicated initiative committed to the welfare of stray dogs and cats in Baguio City and beyond. 
-                We bridge the gap between compassionate citizens and animals in need.</p>
-        </div> -->
 
         <div class="content-box">
             <h2><i class="fas fa-question-circle"></i> Pet Adoption FAQ</h2>
@@ -613,7 +586,8 @@ if (isset($_SESSION['user_id'])) {
                 $my_uid = $_SESSION['user_id'];
                 $my_reports = $conn->query("SELECT * FROM lost_pets WHERE user_id = '$my_uid' AND status = 'Missing'");
                 
-                if($my_reports && $my_reports->num_rows > 0) {
+                // FIX: Changed num_rows to rowCount() for PDO
+                if($my_reports && $my_reports->rowCount() > 0) {
                     while($my_row = $my_reports->fetch(PDO::FETCH_ASSOC)) {
                     ?>
                     <div style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; min-width: 300px; margin-bottom: 10px;">
@@ -668,7 +642,9 @@ if (isset($_SESSION['user_id'])) {
                 <h3>Recent Reports</h3>
                 <?php
                 $lost = $conn->query("SELECT * FROM lost_pets ORDER BY id DESC");
-                if($lost && $lost->num_rows > 0) {
+                
+                // FIX: Changed num_rows to rowCount() for PDO
+                if($lost && $lost->rowCount() > 0) {
                     while($row = $lost->fetch(PDO::FETCH_ASSOC)){
                         $status = $row['status']; 
                         $border_color = ($status == 'Found') ? "var(--success)" : "var(--danger)";
