@@ -659,29 +659,45 @@ if (isset($_SESSION['user_id'])) {
                 if($lost && $lost->rowCount() > 0) {
                     while($row = $lost->fetch(PDO::FETCH_ASSOC)){
                         $status = $row['status']; 
+                        
+                        // Set colors for the left border and the status badge
                         $border_color = ($status == 'Found') ? "var(--success)" : "var(--danger)";
-                        $badge_color = ($status == 'Found') ? "#d4edda" : "white";
-                        $text_color = ($status == 'Found') ? "#155724" : "#721c24";
+                        $badge_bg = ($status == 'Found') ? "#d4edda" : "#f8d7da";
+                        $badge_text = ($status == 'Found') ? "#155724" : "#721c24";
+                        
                         $map_query = urlencode($row['location'] . " Baguio City");
                         $map_link = "https://www.google.com/maps/search/?api=1&query=" . $map_query;
 
-                        echo "<div class='missing-card' style='border-left: 5px solid {$border_color}; background: {$badge_color};'>
-                            <div class='missing-img-container'><img src='{$row['photo_path']}'></div>
+                        echo "<div class='missing-card' style='border-left: 5px solid {$border_color}; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch;'>
+                            <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
+                                <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover;'>
+                            </div>
+                            <div style='flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;'>
                                 <div>
-                            <h4 style='color: {$text_color};'>{$status}: " . htmlspecialchars($row['pet_name']) . "</h4>
-                            <p><a href='$map_link' target='_blank' style='text-decoration:none; color:#555;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>
-                            
-                            <p style='font-size: 0.9rem; color: #444; margin: 8px 0; font-style: italic;'>" . htmlspecialchars($row['description']) . "</p>
-                            
-                            <p style='font-size: 0.85rem; color: #666; margin-bottom: 2px;'>Found this pet? Contact CVAO:</p>
-                            <p><a href='tel:0744435332' style='text-decoration:none; color:var(--primary-color); font-weight:bold;'><i class='fas fa-phone'></i> (074) 443-5332</a></p>
-                        </div>
-                    </div>";
+                                    <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;'>
+                                        <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'>" . htmlspecialchars($row['pet_name']) . "</h4>
+                                        <span style='background: {$badge_bg}; color: {$badge_text}; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>" . htmlspecialchars($status) . "</span>
+                                    </div>
+                                    <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>
+                                    ";
+                                    
+                                    // Wrap the description in a stylized quote box
+                                    if (!empty($row['description'])) {
+                                        echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
+                                    }
+                                    
+                                echo "</div>
+                                
+                                <div style='margin-top: auto; border-top: 1px solid #eee; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;'>
+                                    <span style='font-size: 0.8rem; color: #777;'>Contact CVAO to report/claim:</span>
+                                    <a href='tel:0744435332' style='text-decoration:none; color:var(--primary-color); font-weight:bold; font-size: 0.9rem; background: #eef2f5; padding: 4px 10px; border-radius: 4px; transition: background 0.2s;' onmouseover=\"this.style.background='#dce4ec'\" onmouseout=\"this.style.background='#eef2f5'\"><i class='fas fa-phone'></i> (074) 443-5332</a>
+                                </div>
+                            </div>
+                        </div>";
                     }
                 } else { echo "<p>No lost pets reported.</p>"; }
                 ?>
             </div>
-        </div>
     </section>
 
     <section id="shelters" class="container">
