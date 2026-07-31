@@ -501,7 +501,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     <?php
                     // Query specifically for is_archived = 1
                     $archived_pets = $conn->query("SELECT * FROM pets WHERE is_archived = 1 ORDER BY id DESC");
-                    if ($archived_pets && $archived_pets->num_rows > 0) {
+                    if ($archived_pets && $archived_pets->rowCount() > 0) {
                         while($row = $archived_pets->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
@@ -539,7 +539,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     <?php
                     // Query specifically for is_archived = 1
                     $archived_apps = $conn->query("SELECT * FROM applications WHERE is_archived = 1 ORDER BY id DESC");
-                    if ($archived_apps && $archived_apps->num_rows > 0) {
+                    if ($archived_apps && $archived_apps->rowCount() > 0) {
                         while($row = $archived_apps->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
