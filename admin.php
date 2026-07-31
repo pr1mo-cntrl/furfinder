@@ -1,25 +1,11 @@
 <?php
 include 'db.php';
 
-// Catch the update_application signal from the admin button
-if (isset($_POST['update_application'])) {
-    $app_id = $_POST['app_id'];
-    $new_status = $_POST['status']; 
-
-    $stmt = $conn->prepare("UPDATE applications SET status = ? WHERE id = ?");
-    if ($stmt->execute([$new_status, $app_id])) {
-        echo "<script>alert('Application status updated to " . $new_status . "!'); window.location.href='admin.php';</script>";
-    } else {
-        echo "<script>alert('Error updating database.');</script>";
-    }
-}
-
-// Start session if not already started
+// 1. CRITICAL FIX: Start session and verify admin BEFORE any data can be modified
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in and is admin
 if(!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
     exit();
@@ -27,7 +13,7 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 
 // --- PHP HANDLERS ---
 
-// 1. Handle New Pet (With File Upload & Directory Check)
+// 1. Handle New Pet (Supabase Cloud Storage & PRG Redirect Fix)
 if (isset($_POST['add_pet'])) {
     $name = $_POST['name'];
     $breed = $_POST['breed'];
@@ -36,33 +22,43 @@ if (isset($_POST['add_pet'])) {
     $backstory = $_POST['backstory'];
     $medical_history = $_POST['medical_history'];
 
-    $target_dir = "uploads/";
-    if (!file_exists($target_dir)) { mkdir($target_dir, 0777, true); }
-    
     if (isset($_FILES["pet_photo"]) && $_FILES["pet_photo"]["error"] == 0) {
-        $check = getimagesize($_FILES["pet_photo"]["tmp_name"]);
-        if($check === false) { echo ""; exit(); }
-        if ($_FILES["pet_photo"]["size"] > 5000000) { echo ""; exit(); }
+        $file_tmp = $_FILES["pet_photo"]["tmp_name"];
+        $file_name = $_FILES["pet_photo"]["name"];
+        $file_ext = pathinfo($file_name, PATHINFO_EXTENSION);
+        $unique_filename = time() . "_" . uniqid() . "." . $file_ext;
         
-        $file_info = pathinfo($_FILES["pet_photo"]["name"]);
-        $file_extension = $file_info['extension'];
-        $unique_filename = time() . "_" . $file_info['filename'] . "." . $file_extension;
-        $target_file = $target_dir . $unique_filename;
-        $image_url = $target_file; 
-
-        if (!is_dir($target_dir)) {
-            mkdir($target_dir, 0777, true);
-        }
-
-        if (move_uploaded_file($_FILES["pet_photo"]["tmp_name"], $target_file)) {
+        $supabase_url = getenv('SUPABASE_URL');
+        $supabase_key = getenv('SUPABASE_SERVICE_KEY');
+        
+        $storage_url = "$supabase_url/storage/v1/object/pet-photos/$unique_filename";
+        $file_data = file_get_contents($file_tmp);
+        
+        $ch = curl_init($storage_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $file_data);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer $supabase_key",
+            "Content-Type: " . $_FILES["pet_photo"]["type"],
+            "x-upsert: true"
+        ]);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($http_code === 200 || $http_code === 201) {
+            $image_url = "$supabase_url/storage/v1/object/public/pet-photos/$unique_filename";
+            
             $stmt = $conn->prepare("INSERT INTO pets (name, breed, age, backstory, medical_history, image_url, type) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, $breed, $age, $backstory, $medical_history, $image_url, $type]);
-            echo "";
+            
+            header("Location: admin.php");
+            exit();
         } else {
-            echo "";
+            echo "<script>alert('Error uploading image to Supabase Storage.');</script>";
         }
-    } else {
-         echo "";
     }
 }
 
@@ -86,13 +82,13 @@ if (isset($_POST['update_shelter'])) {
     echo "<script>alert('Shelter details updated!'); window.location.href='admin.php';</script>";
 }
 
-// 4. Handle Application Status Update
+// 4. Handle Application Status Update (Removed duplicate block from top of file)
 if (isset($_POST['update_application'])) {
     $id = $_POST['app_id'];
     $status = $_POST['status'];
     $stmt = $conn->prepare("UPDATE applications SET status = ? WHERE id = ?");
     $stmt->execute([$status, $id]);
-    echo "<script>window.location.href='admin.php';</script>";
+    echo "<script>alert('Application status updated!'); window.location.href='admin.php';</script>";
 }
 
 // 5. Handle Lost Pet Status Update (Mark Found)
@@ -130,7 +126,8 @@ if (isset($_POST['update_pet'])) {
     
     $stmt = $conn->prepare("UPDATE pets SET name=?, breed=?, age=?, backstory=?, medical_history=? WHERE id=?");
     if($stmt->execute([$name, $breed, $age, $backstory, $medical_history, $id])){
-        echo "";
+        // FIX: Replaced empty echo with proper redirect
+        echo "<script>alert('Pet details updated successfully!'); window.location.href='admin.php';</script>";
     }
 }
 
@@ -159,8 +156,9 @@ if (isset($_POST['restore_application'])) {
 }
 
 // --- DESCRIPTIVE ANALYTICS DATA FETCHING ---
-$dog_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='dog' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
-$cat_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='cat' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
+// FIX: Using fetchColumn() prevents fatal array offset errors if the database stutters
+$dog_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='dog' AND is_archived=0")->fetchColumn() ?: 0;
+$cat_count = $conn->query("SELECT COUNT(*) FROM pets WHERE type='cat' AND is_archived=0")->fetchColumn() ?: 0;
 
 $breed_labels = [];
 $breed_counts = [];
@@ -172,9 +170,9 @@ if ($breed_res) {
     }
 }
 
-$app_pending = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
-$app_approved = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Approved%' AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
-$app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LIKE 'Rejected%' OR status='Acknowledged') AND is_archived=0")->fetch(PDO::FETCH_NUM)[0] ?? 0;
+$app_pending = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived=0")->fetchColumn() ?: 0;
+$app_approved = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Approved%' AND is_archived=0")->fetchColumn() ?: 0;
+$app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LIKE 'Rejected%' OR status='Acknowledged') AND is_archived=0")->fetchColumn() ?: 0;
 ?>
 
 <!DOCTYPE html>
@@ -348,19 +346,19 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             <div class="card" style="border-left-color: var(--primary-color);">
                 <h3>Total Pets</h3>
                 <p style="color: var(--primary-color);">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM pets WHERE is_archived = 0")->fetch(PDO::FETCH_NUM)[0]; ?>
+                    <?php echo htmlspecialchars($dog_count + $cat_count); ?>
                 </p>
             </div>
             <div class="card" style="border-left-color: var(--accent-color);">
                 <h3>Pending Applications</h3>
                 <p style="color: var(--accent-color);">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived = 0")->fetch(PDO::FETCH_NUM)[0]; ?>
+                    <?php echo htmlspecialchars($app_pending); ?>
                 </p>
             </div>
             <div class="card" style="border-left-color: var(--danger);">
                 <h3>Lost Reports</h3>
                 <p style="color: var(--danger);">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='Missing'")->fetch(PDO::FETCH_NUM)[0]; ?>
+                    <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='Missing'")->fetchColumn() ?: 0; ?>
                 </p>
             </div>
         </div>
@@ -418,11 +416,11 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     ?>
                         <tr>
                             <td><?php echo $row['id']; ?></td>
-                            <td><img src="<?php echo $row['image_url']; ?>" alt="Pet Photo" style="width: 50px; height: 50px; object-fit: cover;"></td>
+                            <td><img src="<?php echo htmlspecialchars($row['image_url']); ?>" alt="Pet Photo" style="width: 50px; height: 50px; object-fit: cover;"></td>
                             <td><?php echo htmlspecialchars($row['name']); ?></td>
                             <td><?php echo htmlspecialchars($row['breed']); ?></td>
-                            <td><?php echo ucfirst($row['type']); ?></td>
-                            <td><?php echo $row['status']; ?></td>
+                            <td><?php echo htmlspecialchars(ucfirst($row['type'])); ?></td>
+                            <td><?php echo htmlspecialchars($row['status']); ?></td>
                             <td>
                                 <div style="display: flex; gap: 5px; align-items: center;">
                                     <?php if(strtolower($row['status']) != 'adopted'): ?>
@@ -433,7 +431,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                     <?php endif; ?>
                             
                                     <button type="button" class="btn-save" 
-                                            onclick="openEditModal('<?php echo $row['id']; ?>', '<?php echo addslashes($row['name']); ?>', '<?php echo addslashes($row['breed']); ?>', '<?php echo addslashes($row['age']); ?>', '<?php echo addslashes(isset($row['backstory']) ? $row['backstory'] : ''); ?>', '<?php echo addslashes(isset($row['medical_history']) ? $row['medical_history'] : ''); ?>')">
+                                            onclick="openEditModal('<?php echo htmlspecialchars($row['id'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($row['name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($row['breed'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($row['age'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars(isset($row['backstory']) ? $row['backstory'] : '', ENT_QUOTES); ?>', '<?php echo htmlspecialchars(isset($row['medical_history']) ? $row['medical_history'] : '', ENT_QUOTES); ?>')">
                                         Edit
                                     </button>
                                     
@@ -471,8 +469,8 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         <tr>
                             <td><?php echo $row['id']; ?></td>
                             <td><?php echo htmlspecialchars($row['name']); ?></td>
-                            <td><?php echo ucfirst($row['type']); ?></td>
-                            <td><?php echo $row['status']; ?></td>
+                            <td><?php echo htmlspecialchars(ucfirst($row['type'])); ?></td>
+                            <td><?php echo htmlspecialchars($row['status']); ?></td>
                             <td>
                                 <form method="POST" style="margin:0;">
                                     <input type="hidden" name="pet_id" value="<?php echo $row['id']; ?>">
@@ -508,7 +506,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         <tr>
                             <td><?php echo htmlspecialchars($row['pet_name']); ?></td>
                             <td><?php echo htmlspecialchars($row['fullname']); ?></td>
-                            <td><?php echo $row['status']; ?></td>
+                            <td><?php echo htmlspecialchars($row['status']); ?></td>
                             <td>
                                 <form method="POST" style="margin:0;">
                                     <input type="hidden" name="app_id" value="<?php echo $row['id']; ?>">
@@ -583,31 +581,31 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         $statusClass = strtolower($clean_status);
                         if ($statusClass == 'acknowledged') { $statusClass = 'rejected'; }
                     ?>
-                        <tr class="app-row status-<?php echo $statusClass; ?>">
-                            <td style="font-weight:bold; color:var(--primary-color);"><?php echo $row['pet_name']; ?></td>
+                        <tr class="app-row status-<?php echo htmlspecialchars($statusClass); ?>">
+                            <td style="font-weight:bold; color:var(--primary-color);"><?php echo htmlspecialchars($row['pet_name']); ?></td>
                             <td>
-                                <strong><?php echo $row['fullname']; ?></strong><br>
-                                <small><i class="fas fa-phone"></i> <?php echo $row['contact']; ?></small><br>
-                                <small><i class="fas fa-map-marker-alt"></i> <?php echo $row['address']; ?></small>
+                                <strong><?php echo htmlspecialchars($row['fullname']); ?></strong><br>
+                                <small><i class="fas fa-phone"></i> <?php echo htmlspecialchars($row['contact']); ?></small><br>
+                                <small><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($row['address']); ?></small>
                                 <button type="button" class="btn-view" onclick="viewAppDetails(<?php echo $safeData; ?>)">
                                     <i class="fas fa-eye"></i> View Answers
                                 </button>
                             </td>
                             <td>
                                 <?php if(isset($row['barangay_cert']) && $row['barangay_cert']): ?>
-                                    <a href="<?php echo $row['barangay_cert']; ?>" target="_blank" class="doc-link"><i class="fas fa-file-contract"></i> View Brgy Cert</a>
+                                    <a href="<?php echo htmlspecialchars($row['barangay_cert']); ?>" target="_blank" class="doc-link"><i class="fas fa-file-contract"></i> View Brgy Cert</a>
                                 <?php else: ?>
                                     <span style="color:#999; font-size:0.8rem;">No Brgy Cert</span><br>
                                 <?php endif; ?>
                                 
                                 <?php if(isset($row['valid_id']) && $row['valid_id']): ?>
-                                    <a href="<?php echo $row['valid_id']; ?>" target="_blank" class="doc-link"><i class="fas fa-id-card"></i> View Valid ID</a>
+                                    <a href="<?php echo htmlspecialchars($row['valid_id']); ?>" target="_blank" class="doc-link"><i class="fas fa-id-card"></i> View Valid ID</a>
                                 <?php else: ?>
                                     <span style="color:#999; font-size:0.8rem;">No ID</span><br>
                                 <?php endif; ?>
 
                                 <?php if(isset($row['cage_photo']) && $row['cage_photo']): ?>
-                                    <a href="<?php echo $row['cage_photo']; ?>" target="_blank" class="doc-link"><i class="fas fa-home"></i> View Cage/Leash</a>
+                                    <a href="<?php echo htmlspecialchars($row['cage_photo']); ?>" target="_blank" class="doc-link"><i class="fas fa-home"></i> View Cage/Leash</a>
                                 <?php else: ?>
                                     <span style="color:#999; font-size:0.8rem;">No Cage Photo</span>
                                 <?php endif; ?>
@@ -679,11 +677,11 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     while($row = $lost->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
-                            <td><?php echo $row['pet_name']; ?></td>
-                            <td><?php echo $row['location']; ?></td>
-                            <td><?php echo $row['contact_number']; ?></td>
-                            <td><a href="<?php echo $row['photo_path']; ?>" target="_blank">View Photo</a> | <?php echo substr($row['description'], 0, 30); ?>...</td>
-                            <td><?php echo $row['status']; ?></td>
+                            <td><?php echo htmlspecialchars($row['pet_name']); ?></td>
+                            <td><?php echo htmlspecialchars($row['location']); ?></td>
+                            <td><?php echo htmlspecialchars($row['contact_number']); ?></td>
+                            <td><a href="<?php echo htmlspecialchars($row['photo_path']); ?>" target="_blank">View Photo</a> | <?php echo htmlspecialchars(substr($row['description'], 0, 30)); ?>...</td>
+                            <td><?php echo htmlspecialchars($row['status']); ?></td>
                             <td style="display: flex; gap: 10px; align-items: center;">
                                 <?php if ($row['status'] == 'Found'): ?>
                                     <button class="btn-save" disabled style="background-color: var(--success); cursor: default; opacity: 0.7; font-size: 0.8rem; padding: 6px 12px;">
@@ -728,12 +726,12 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     while($row = $shelters->fetch(PDO::FETCH_ASSOC)):
                     ?>
                         <tr>
-                            <td><?php echo $row['name']; ?></td>
+                            <td><?php echo htmlspecialchars($row['name']); ?></td>
                             <form method="POST" class="shelter-update">
                                 <input type="hidden" name="shelter_id" value="<?php echo $row['id']; ?>">
-                                <td><input type="email" name="email" value="<?php echo $row['email']; ?>" required></td>
-                                <td><input type="text" name="schedule" value="<?php echo $row['schedule']; ?>" required></td>
-                                <td><?php echo $row['status']; ?></td>
+                                <td><input type="email" name="email" value="<?php echo htmlspecialchars($row['email']); ?>" required></td>
+                                <td><input type="text" name="schedule" value="<?php echo htmlspecialchars($row['schedule']); ?>" required></td>
+                                <td><?php echo htmlspecialchars($row['status']); ?></td>
                                 <td>
                                     <select name="status">
                                         <option value="Open" <?php if($row['status'] == 'Open') echo 'selected'; ?>>Open</option>
