@@ -440,7 +440,7 @@ if (isset($_SESSION['user_id'])) {
             <!-- <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-bottom: 4px solid var(--danger);">
                 <i class="fas fa-search-location fa-2x" style="color: var(--danger); margin-bottom: 10px;"></i>
                 <h3 style="margin:0; font-size: 2rem;">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='Missing'")->fetch_row()[0]; ?>
+                    <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='Missing'")->fetch()[0]; ?>
                 </h3>
                 <p style="color: #666; font-size: 0.9rem;">Missing Pets</p>
             </div>
@@ -448,7 +448,7 @@ if (isset($_SESSION['user_id'])) {
             <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-bottom: 4px solid var(--primary-color);">
                 <i class="fas fa-users fa-2x" style="color: var(--primary-color); margin-bottom: 10px;"></i>
                 <h3 style="margin:0; font-size: 2rem;">
-                    <?php echo $conn->query("SELECT COUNT(*) FROM users")->fetch_row()[0]; ?>
+                    <?php echo $conn->query("SELECT COUNT(*) FROM users")->fetch()[0]; ?>
                 </h3>
                 <p style="color: #666; font-size: 0.9rem;">Registered Users</p>
             </div>
