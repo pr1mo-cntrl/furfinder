@@ -1,4 +1,5 @@
- <?php
+<?php
+session_start();
 $uri = "postgresql://postgres.hmsmjxdkvaklpuvsrdfv:furfinder2026@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres";
 
 $db_parsed = parse_url($uri);
@@ -14,7 +15,3 @@ try {
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }
-
-//Session Tracking
-session_start();
-?>

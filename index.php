@@ -131,7 +131,7 @@ $fundraiser_target = 50000;
 $total_raised_query = $conn->query("SELECT SUM(amount) FROM donations");
 $total_raised = 0;
 if ($total_raised_query) {
-    $row = $total_raised_query->fetch_row();
+    $row = $total_raised_query->fetch();
     $total_raised = $row[0] ? $row[0] : 0; // Default to 0 if null
 }
 
