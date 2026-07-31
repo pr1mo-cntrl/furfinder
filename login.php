@@ -1,58 +1,45 @@
-<?php
-include 'db.php';
-
-// HANDLE REGISTER
-if (isset($_POST['register'])) {
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $pass = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    
-    // New Fields
-    $barangay = $_POST['barangay'];
-    $age_group = $_POST['age_group'];
-    $current_pets = $_POST['current_pets_status'];
-    $pref_breed = $_POST['preferred_breed'];
-    
-    $role = 'user'; // Default role
-
-    // Check if creating the specific admin account
-    if($email === 'admin@furfinder.com') { $role = 'admin'; }
-
-    // Upgraded to Prepared Statement for security and to handle apostrophes
-    $stmt = $conn->prepare("INSERT INTO users (name, email, password, role, barangay, age_group, current_pets_status, preferred_breed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssssss", $name, $email, $pass, $role, $barangay, $age_group, $current_pets, $pref_breed);
-    
-    if ($stmt->execute()) {
-        echo "<script>alert('Registration Successful! Please Login.');</script>";
-    } else {
-        echo "Error: " . $conn->error;
+prepare("INSERT INTO users (name, email, password, role, barangay, age_group, current_pets_status, preferred_breed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        if ($stmt->execute([$name, $email, $pass, $role, $barangay, $age_group, $current_pets, $pref_breed])) {
+            echo "";
+        }
+    } catch (PDOException $e) {
+        echo "";
     }
 }
 
 // HANDLE LOGIN
 if (isset($_POST['login'])) {
-    $email = $_POST['email'];
+    $email = strtolower(trim($_POST['email'])); // Force lowercase
     $password = $_POST['password'];
 
-    $result = $conn->query("SELECT * FROM users WHERE email='$email'");
-    if ($result->rowCount() > 0) {
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        if (password_verify($password, $row['password'])) {
-            session_regenerate_id(true);
-            $_SESSION['user_id'] = $row['id'];
-            $_SESSION['name'] = $row['name'];
-            $_SESSION['role'] = $row['role'];
+    try {
+        // Proper PDO Prepared Statement
+        $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($row['role'] == 'admin') {
-                header("Location: admin.php");
+        if ($row) { // If a row was found (replaces rowCount > 0)
+            if (password_verify($password, $row['password'])) {
+                session_regenerate_id(true);
+                $_SESSION['user_id'] = $row['id'];
+                $_SESSION['name'] = $row['name'];
+                $_SESSION['role'] = $row['role'];
+
+                if ($row['role'] == 'admin') {
+                    header("Location: admin.php");
+                    exit(); // Always exit after a header redirect
+                } else {
+                    header("Location: index.php");
+                    exit();
+                }
             } else {
-                header("Location: index.php");
+                echo "";
             }
         } else {
-            echo "<script>alert('Invalid Password');</script>";
+            echo "";
         }
-    } else {
-        echo "<script>alert('User not found');</script>";
+    } catch (PDOException $e) {
+        echo "";
     }
 }
 ?>
