@@ -63,8 +63,7 @@ if (isset($_POST['add_pet'])) {
         if (move_uploaded_file($_FILES["pet_photo"]["tmp_name"], $target_file)) {
             // UPDATED QUERY TO INCLUDE BACKSTORY AND MEDICAL HISTORY
             $stmt = $conn->prepare("INSERT INTO pets (name, breed, age, backstory, medical_history, image_url, type) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssssss", $name, $breed, $age, $backstory, $medical_history, $image_url, $type);
-            $stmt->execute();
+            $stmt->execute("sssssss", $name, $breed, $age, $backstory, $medical_history, $image_url, $type);
             echo "";
         } else {
             echo "";
