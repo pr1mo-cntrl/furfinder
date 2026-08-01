@@ -113,12 +113,20 @@ if (isset($_POST['archive_application'])) {
     echo "<script>alert('Application securely archived.'); window.location.href='admin.php';</script>";
 }
 
-// 7. Handle Lost Pet Deletion
+// 7. Handle Lost Pet Archiving (Soft Delete)
 if (isset($_POST['delete_lost_pet'])) {
     $id = $_POST['lost_pet_id'];
-    $stmt = $conn->prepare("DELETE FROM lost_pets WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE lost_pets SET is_archived = 1 WHERE id = ?");
     $stmt->execute([$id]);
-    echo "<script>alert('Lost pet post deleted.'); window.location.href='admin.php';</script>";
+    echo "<script>alert('Lost pet post archived securely.'); window.location.href='admin.php';</script>";
+}
+
+// Handle Restoring Lost Pets
+if (isset($_POST['restore_lost_pet'])) {
+    $id = $_POST['lost_pet_id'];
+    $stmt = $conn->prepare("UPDATE lost_pets SET is_archived = 0 WHERE id = ?");
+    $stmt->execute([$id]);
+    echo "<script>alert('Lost pet restored successfully.'); window.location.href='admin.php';</script>";
 }
 
 // 8. Handle Pet Update
@@ -454,80 +462,173 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         </div>
 
         <div id="archives" class="section">
-            <h3>Archived Pets</h3>
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">These pets are hidden from the main dashboard but preserved for records.</p>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $archived_pets = $conn->query("SELECT * FROM pets WHERE is_archived = 1 ORDER BY id DESC");
-                    if ($archived_pets && $archived_pets->rowCount() > 0) {
-                        while($row = $archived_pets->fetch(PDO::FETCH_ASSOC)):
-                    ?>
-                        <tr>
-                            <td><?php echo $row['id']; ?></td>
-                            <td><?php echo htmlspecialchars($row['name']); ?></td>
-                            <td><?php echo htmlspecialchars(ucfirst($row['type'])); ?></td>
-                            <td><?php echo htmlspecialchars($row['status']); ?></td>
-                            <td>
-                                <form method="POST" style="margin:0;">
-                                    <input type="hidden" name="pet_id" value="<?php echo $row['id']; ?>">
-                                    <button type="submit" name="restore_pet" class="btn-save" style="background-color: #17a2b8;">Restore</button>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php 
-                        endwhile; 
-                    } else {
-                        echo "<tr><td colspan='5' style='text-align:center;'>No archived pets found.</td></tr>";
-                    }
-                    ?>
-                </tbody>
-            </table>
+            <h3 style="border-bottom: none; margin-bottom: 10px;">Archives</h3>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">These records are hidden from the main dashboard but preserved securely for reference.</p>
+            
+            <!-- TABS UI -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+                <button type="button" id="archive-tab-pets" style="padding: 8px 20px; border: none; background: var(--primary-color); color: white; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchArchiveTab('pets')">
+                    <i class="fas fa-dog"></i> Pets
+                </button>
+                <button type="button" id="archive-tab-apps" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchArchiveTab('apps')">
+                    <i class="fas fa-file-alt"></i> Applications
+                </button>
+                <button type="button" id="archive-tab-lost" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchArchiveTab('lost')">
+                    <i class="fas fa-search-location"></i> Lost & Found
+                </button>
+            </div>
 
-            <h3 style="margin-top: 40px;">Archived Applications</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Pet Name</th>
-                        <th>Applicant</th>
-                        <th>Final Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $archived_apps = $conn->query("SELECT * FROM applications WHERE is_archived = 1 ORDER BY id DESC");
-                    if ($archived_apps && $archived_apps->rowCount() > 0) {
-                        while($row = $archived_apps->fetch(PDO::FETCH_ASSOC)):
-                    ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($row['pet_name']); ?></td>
-                            <td><?php echo htmlspecialchars($row['fullname']); ?></td>
-                            <td><?php echo htmlspecialchars($row['status']); ?></td>
-                            <td>
-                                <form method="POST" style="margin:0;">
-                                    <input type="hidden" name="app_id" value="<?php echo $row['id']; ?>">
-                                    <button type="submit" name="restore_application" class="btn-save" style="background-color: #17a2b8;">Restore</button>
-                                </form>
-                            </td>
+            <!-- ARCHIVED PETS TABLE -->
+            <div id="archive-table-pets" style="display: block; overflow-x: auto;">
+                <table class="data-table" style="margin-top: 0;">
+                    <thead>
+                        <tr style="background-color: var(--primary-color); color: white;">
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th style="text-align: center;">Action</th>
                         </tr>
-                    <?php 
-                        endwhile; 
-                    } else {
-                        echo "<tr><td colspan='4' style='text-align:center;'>No archived applications found.</td></tr>";
-                    }
-                    ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $archived_pets = $conn->query("SELECT * FROM pets WHERE is_archived = 1 ORDER BY id DESC");
+                        if ($archived_pets && $archived_pets->rowCount() > 0) {
+                            while($row = $archived_pets->fetch(PDO::FETCH_ASSOC)):
+                        ?>
+                            <tr>
+                                <td><?php echo $row['id']; ?></td>
+                                <td><?php echo htmlspecialchars($row['name']); ?></td>
+                                <td><?php echo htmlspecialchars(ucfirst($row['type'])); ?></td>
+                                <td><?php echo htmlspecialchars($row['status']); ?></td>
+                                <td style="display: flex; justify-content: center;">
+                                    <form method="POST" style="margin:0;">
+                                        <input type="hidden" name="pet_id" value="<?php echo $row['id']; ?>">
+                                        <button type="submit" name="restore_pet" class="btn-save" style="background-color: #17a2b8;"><i class="fas fa-undo"></i> Restore</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php 
+                            endwhile; 
+                        } else {
+                            echo "<tr><td colspan='5' style='text-align:center;'>No archived pets found.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ARCHIVED APPLICATIONS TABLE -->
+            <div id="archive-table-apps" style="display: none; overflow-x: auto;">
+                <table class="data-table" style="margin-top: 0;">
+                    <thead>
+                        <tr style="background-color: var(--primary-color); color: white;">
+                            <th>Pet Name</th>
+                            <th>Applicant</th>
+                            <th>Final Status</th>
+                            <th style="text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $archived_apps = $conn->query("SELECT * FROM applications WHERE is_archived = 1 ORDER BY id DESC");
+                        if ($archived_apps && $archived_apps->rowCount() > 0) {
+                            while($row = $archived_apps->fetch(PDO::FETCH_ASSOC)):
+                        ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($row['pet_name']); ?></td>
+                                <td><?php echo htmlspecialchars($row['fullname']); ?></td>
+                                <td><?php echo htmlspecialchars($row['status']); ?></td>
+                                <td style="display: flex; justify-content: center;">
+                                    <form method="POST" style="margin:0;">
+                                        <input type="hidden" name="app_id" value="<?php echo $row['id']; ?>">
+                                        <button type="submit" name="restore_application" class="btn-save" style="background-color: #17a2b8;"><i class="fas fa-undo"></i> Restore</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php 
+                            endwhile; 
+                        } else {
+                            echo "<tr><td colspan='4' style='text-align:center;'>No archived applications found.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ARCHIVED LOST & FOUND TABLE -->
+            <div id="archive-table-lost" style="display: none; overflow-x: auto;">
+                <table class="data-table" style="margin-top: 0;">
+                    <thead>
+                        <tr style="background-color: var(--primary-color); color: white;">
+                            <th>Photo</th>
+                            <th>Pet Name</th>
+                            <th>Location</th>
+                            <th>Final Status</th>
+                            <th style="text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $archived_lost = $conn->query("SELECT * FROM lost_pets WHERE is_archived = 1 ORDER BY id DESC");
+                        if ($archived_lost && $archived_lost->rowCount() > 0) {
+                            while($row = $archived_lost->fetch(PDO::FETCH_ASSOC)):
+                        ?>
+                            <tr>
+                                <td><img src="<?php echo htmlspecialchars($row['photo_path']); ?>" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.src='https://via.placeholder.com/40'"></td>
+                                <td><?php echo htmlspecialchars($row['pet_name']); ?></td>
+                                <td><?php echo htmlspecialchars($row['location']); ?></td>
+                                <td><?php echo htmlspecialchars($row['status']); ?></td>
+                                <td style="display: flex; justify-content: center;">
+                                    <form method="POST" style="margin:0;">
+                                        <input type="hidden" name="lost_pet_id" value="<?php echo $row['id']; ?>">
+                                        <button type="submit" name="restore_lost_pet" class="btn-save" style="background-color: #17a2b8;"><i class="fas fa-undo"></i> Restore</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php 
+                            endwhile; 
+                        } else {
+                            echo "<tr><td colspan='5' style='text-align:center;'>No archived lost & found reports.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <script>
+            function switchArchiveTab(tabName) {
+                var btnPets = document.getElementById('archive-tab-pets');
+                var btnApps = document.getElementById('archive-tab-apps');
+                var btnLost = document.getElementById('archive-tab-lost');
+                
+                var tablePets = document.getElementById('archive-table-pets');
+                var tableApps = document.getElementById('archive-table-apps');
+                var tableLost = document.getElementById('archive-table-lost');
+                
+                // Reset all buttons
+                btnPets.style.background = '#e2e6ea'; btnPets.style.color = '#333';
+                btnApps.style.background = '#e2e6ea'; btnApps.style.color = '#333';
+                btnLost.style.background = '#e2e6ea'; btnLost.style.color = '#333';
+                
+                // Hide all tables
+                tablePets.style.display = 'none';
+                tableApps.style.display = 'none';
+                tableLost.style.display = 'none';
+                
+                // Show active tab
+                if (tabName === 'pets') {
+                    btnPets.style.background = 'var(--primary-color)'; btnPets.style.color = 'white';
+                    tablePets.style.display = 'block';
+                } else if (tabName === 'apps') {
+                    btnApps.style.background = 'var(--primary-color)'; btnApps.style.color = 'white';
+                    tableApps.style.display = 'block';
+                } else if (tabName === 'lost') {
+                    btnLost.style.background = 'var(--primary-color)'; btnLost.style.color = 'white';
+                    tableLost.style.display = 'block';
+                }
+            }
+            </script>
         </div>
 
         <div id="analytics" class="section">
@@ -692,7 +793,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     </thead>
                     <tbody>
                         <?php
-                        $missing = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' ORDER BY id DESC");
+                        $found = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' AND is_archived = 0 ORDER BY id DESC");
                         if($missing && $missing->rowCount() > 0) {
                             while($row = $missing->fetch(PDO::FETCH_ASSOC)) {
                                 echo "<tr>";
