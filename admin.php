@@ -16,15 +16,9 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 // 1. Handle New Pet (Supabase Cloud Storage & PRG Redirect Fix)
 if (isset($_POST['add_pet'])) {
     $name = $_POST['name'];
-    $breed = $_POST['breed'];
-    $breed = $_POST['breed'];
-    if (($breed === 'Other' || $breed === 'Mixed Breed') && !empty($_POST['custom_breed'])) {
-        if ($breed === 'Mixed Breed') {
-            // Formats it nicely as: Mixed Breed (Terrier/Poodle)
-            $breed = 'Mixed Breed (' . $_POST['custom_breed'] . ')';
-        } else {
-            $breed = $_POST['custom_breed'];
-        }
+    $breed = trim($_POST['breed']);
+    if ($breed === 'Mixed Breed' && !empty($_POST['custom_breed'])) {
+        $breed = 'Mixed Breed (' . trim($_POST['custom_breed']) . ')';
     }
     $age = $_POST['age'];
     $type = $_POST['type'];
@@ -399,13 +393,12 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     
                     <input type="text" name="name" placeholder="Name of pet" required>
                     
-                    <!-- Added onchange event to trigger the custom input -->
-                    <select name="breed" id="pet_breed" required onchange="checkOtherBreed()">
-                        <option value="" disabled selected>Select type first</option>
-                    </select>
+                    <!-- Replaced select with a searchable datalist input -->
+                    <input type="text" name="breed" id="pet_breed" list="breed_list" placeholder="Select type first" autocomplete="off" required oninput="checkOtherBreed()">
+                    <datalist id="breed_list"></datalist>
                     
-                    <!-- Hidden custom breed input -->
-                    <input type="text" name="custom_breed" id="custom_breed" placeholder="Please indicate breed" style="display: none;">
+                    <!-- Hidden custom breed input (only for Mixed Breed now) -->
+                    <input type="text" name="custom_breed" id="custom_breed" placeholder="What breeds? (e.g., Terrier/Poodle)" style="display: none;">
                     
                     <select name="age" id="pet_age" required>
                         <option value="" disabled selected>Select type first</option>
