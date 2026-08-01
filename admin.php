@@ -17,8 +17,14 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 if (isset($_POST['add_pet'])) {
     $name = $_POST['name'];
     $breed = $_POST['breed'];
-    if ($breed === 'Other' && !empty($_POST['custom_breed'])) {
-        $breed = $_POST['custom_breed'];
+    $breed = $_POST['breed'];
+    if (($breed === 'Other' || $breed === 'Mixed Breed') && !empty($_POST['custom_breed'])) {
+        if ($breed === 'Mixed Breed') {
+            // Formats it nicely as: Mixed Breed (Terrier/Poodle)
+            $breed = 'Mixed Breed (' . $_POST['custom_breed'] . ')';
+        } else {
+            $breed = $_POST['custom_breed'];
+        }
     }
     $age = $_POST['age'];
     $type = $_POST['type'];
@@ -992,11 +998,16 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             
             if (breedSelect.value === 'Other') {
                 customBreedInput.style.display = 'block';
-                customBreedInput.required = true; // Make it required if 'Other' is selected
+                customBreedInput.required = true;
+                customBreedInput.placeholder = 'Type custom breed';
+            } else if (breedSelect.value === 'Mixed Breed') {
+                customBreedInput.style.display = 'block';
+                customBreedInput.required = true;
+                customBreedInput.placeholder = 'What breeds? (e.g., Terrier/Poodle)';
             } else {
                 customBreedInput.style.display = 'none';
                 customBreedInput.required = false;
-                customBreedInput.value = ''; // Clear it out
+                customBreedInput.value = ''; // Clear it out when hidden
             }
         }
 
