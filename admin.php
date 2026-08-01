@@ -793,7 +793,9 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     </thead>
                     <tbody>
                         <?php
-                        $found = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' AND is_archived = 0 ORDER BY id DESC");
+                        // THIS IS THE LINE THAT WAS MISSING
+                        $missing = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' AND is_archived = 0 ORDER BY id DESC");
+                        
                         if($missing && $missing->rowCount() > 0) {
                             while($row = $missing->fetch(PDO::FETCH_ASSOC)) {
                                 echo "<tr>";
@@ -804,14 +806,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
                                 
-                                // FIX: Wrapped buttons in a div instead of applying flex to the td
                                 echo "<td>
                                         <div style='display: flex; gap: 5px; justify-content: center;'>
                                             <form method='POST' style='margin:0;'>
                                                 <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
                                                 <button type='submit' name='mark_found' class='btn-save' style='background: var(--primary-color);'>Mark Found</button>
                                             </form>
-                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this report?');\">
+                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Archive this report?');\">
                                                 <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
                                                 <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
                                             </form>
@@ -842,7 +843,8 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     </thead>
                     <tbody>
                         <?php
-                        $found = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
+                        $found = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' AND is_archived = 0 ORDER BY id DESC");
+                        
                         if($found && $found->rowCount() > 0) {
                             while($row = $found->fetch(PDO::FETCH_ASSOC)) {
                                 echo "<tr style='background-color: #f8f9fa;'>";
@@ -852,10 +854,9 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 echo "<td style='color: #666;'>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #666;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
                                 
-                                // FIX: Wrapped button in a div instead of applying flex to the td
                                 echo "<td>
                                         <div style='display: flex; justify-content: center;'>
-                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this resolved report?');\">
+                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Archive this resolved report?');\">
                                                 <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
                                                 <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
                                             </form>
