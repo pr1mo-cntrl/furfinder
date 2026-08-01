@@ -975,9 +975,10 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
     </div>
 
     <script>
+        // Expanded breed lists (no "Other" needed, they can just type it!)
         const breedOptions = {
-            'dog': ['Aspin', 'Shih Tzu', 'Chow Chow', 'Golden Retriever', 'Pomeranian', 'Mixed Breed', 'Other'],
-            'cat': ['Puspin', 'Persian', 'Siamese', 'Maine Coon', 'Mixed Breed', 'Other']
+            'dog': ['Aspin', 'Shih Tzu', 'Chow Chow', 'Golden Retriever', 'Pomeranian', 'Labrador Retriever', 'German Shepherd', 'Bulldog', 'Poodle', 'Beagle', 'Rottweiler', 'Dachshund', 'Siberian Husky', 'Pug', 'Boxer', 'Chihuahua', 'Doberman Pinscher', 'Great Dane', 'Mixed Breed'],
+            'cat': ['Puspin', 'Persian', 'Siamese', 'Maine Coon', 'Bengal', 'Sphynx', 'British Shorthair', 'Scottish Fold', 'Ragdoll', 'Abyssinian', 'Russian Blue', 'Mixed Breed']
         };
 
         const ageOptions = {
@@ -986,33 +987,33 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         };
 
         function checkOtherBreed() {
-            var breedSelect = document.getElementById('pet_breed');
+            var breedInput = document.getElementById('pet_breed').value;
             var customBreedInput = document.getElementById('custom_breed');
             
-            if (breedSelect.value === 'Other') {
+            // Only show the extra text box if they exactly typed or selected "Mixed Breed"
+            if (breedInput === 'Mixed Breed') {
                 customBreedInput.style.display = 'block';
                 customBreedInput.required = true;
-                customBreedInput.placeholder = 'Type custom breed';
-            } else if (breedSelect.value === 'Mixed Breed') {
-                customBreedInput.style.display = 'block';
-                customBreedInput.required = true;
-                customBreedInput.placeholder = 'What breeds? (e.g., Terrier/Poodle)';
             } else {
                 customBreedInput.style.display = 'none';
                 customBreedInput.required = false;
-                customBreedInput.value = ''; // Clear it out when hidden
+                customBreedInput.value = ''; 
             }
         }
 
         function updateDropdowns() {
             const typeSelected = document.getElementById('pet_type').value;
-            const breedDropdown = document.getElementById('pet_breed');
+            const breedList = document.getElementById('breed_list');
+            const petBreedInput = document.getElementById('pet_breed');
             const ageDropdown = document.getElementById('pet_age');
 
-            breedDropdown.innerHTML = '<option value="" disabled selected>Select Breed</option>';
+            // Reset fields
+            breedList.innerHTML = '';
             ageDropdown.innerHTML = '<option value="" disabled selected>Select Age</option>';
+            
+            petBreedInput.value = '';
+            petBreedInput.placeholder = "Type to search breed...";
 
-            // Hide the custom breed input when changing animal type
             var customBreedInput = document.getElementById('custom_breed');
             if (customBreedInput) {
                 customBreedInput.style.display = 'none';
@@ -1020,15 +1021,16 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 customBreedInput.value = '';
             }
 
+            // Populate the hidden datalist with the big breed arrays
             if (breedOptions[typeSelected]) {
                 breedOptions[typeSelected].forEach(function(breed) {
                     let option = document.createElement('option');
                     option.value = breed;
-                    option.text = breed;
-                    breedDropdown.appendChild(option);
+                    breedList.appendChild(option);
                 });
             }
 
+            // Populate the age dropdown normally
             if (ageOptions[typeSelected]) {
                 ageOptions[typeSelected].forEach(function(age) {
                     let option = document.createElement('option');
