@@ -507,24 +507,29 @@ if (isset($_SESSION['user_id'])) {
         <div class="pet-grid">
             <?php
             $sql = "SELECT * FROM pets WHERE status='available' AND is_archived = 0";
+            $params = []; // Array to hold our secure PDO parameters
             
             if (isset($_GET['search']) && !empty($_GET['search'])) {
-                $search = $conn->real_escape_string($_GET['search']);
-                $sql .= " AND (name LIKE '%$search%' OR breed LIKE '%$search%')";
+                $sql .= " AND (name LIKE ? OR breed LIKE ?)";
+                $search_term = "%" . $_GET['search'] . "%";
+                $params[] = $search_term;
+                $params[] = $search_term;
             }
             if (isset($_GET['type_filter']) && !empty($_GET['type_filter'])) {
-                $type = $conn->real_escape_string($_GET['type_filter']);
-                $sql .= " AND type = '$type'";
+                $sql .= " AND type = ?";
+                $params[] = $_GET['type_filter'];
             }
             if (isset($_GET['age_filter']) && !empty($_GET['age_filter'])) {
-                $age = $conn->real_escape_string($_GET['age_filter']);
-                $sql .= " AND age LIKE '%$age%'"; 
+                $sql .= " AND age LIKE ?";
+                $params[] = "%" . $_GET['age_filter'] . "%"; 
             }
             
-            $result = $conn->query($sql);
+            // Prepare and execute using PDO to prevent fatal errors and SQL injection
+            $stmt = $conn->prepare($sql);
+            $stmt->execute($params);
 
-            if($result && $result->rowCount() > 0){
-                while($row = $result->fetch(PDO::FETCH_ASSOC)){
+            if($stmt && $stmt->rowCount() > 0){
+                while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
                     $age_parts = explode(' ', $row['age']);
                     $badge_text = !empty($age_parts[0]) ? htmlspecialchars($age_parts[0]) : 'New';
                     $badge = "<span class='badge-new'>{$badge_text}</span>";
