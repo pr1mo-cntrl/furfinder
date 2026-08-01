@@ -17,6 +17,9 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 if (isset($_POST['add_pet'])) {
     $name = $_POST['name'];
     $breed = $_POST['breed'];
+    if ($breed === 'Other' && !empty($_POST['custom_breed'])) {
+        $breed = $_POST['custom_breed'];
+    }
     $age = $_POST['age'];
     $type = $_POST['type'];
     $backstory = $_POST['backstory'];
