@@ -393,9 +393,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     
                     <input type="text" name="name" placeholder="Name of pet" required>
                     
-                    <select name="breed" id="pet_breed" required>
+                    <!-- Added onchange event to trigger the custom input -->
+                    <select name="breed" id="pet_breed" required onchange="checkOtherBreed()">
                         <option value="" disabled selected>Select type first</option>
                     </select>
+                    
+                    <!-- Hidden custom breed input -->
+                    <input type="text" name="custom_breed" id="custom_breed" placeholder="Type custom breed" style="display: none;">
                     
                     <select name="age" id="pet_age" required>
                         <option value="" disabled selected>Select type first</option>
@@ -982,6 +986,20 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             'cat': ['Kitten (0-6 Months)', 'Young (6 Mos - 1 Year)', 'Adult (1-4 Years)', 'Senior (5+ Years)']
         };
 
+        function checkOtherBreed() {
+            var breedSelect = document.getElementById('pet_breed');
+            var customBreedInput = document.getElementById('custom_breed');
+            
+            if (breedSelect.value === 'Other') {
+                customBreedInput.style.display = 'block';
+                customBreedInput.required = true; // Make it required if 'Other' is selected
+            } else {
+                customBreedInput.style.display = 'none';
+                customBreedInput.required = false;
+                customBreedInput.value = ''; // Clear it out
+            }
+        }
+
         function updateDropdowns() {
             const typeSelected = document.getElementById('pet_type').value;
             const breedDropdown = document.getElementById('pet_breed');
@@ -989,6 +1007,14 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
 
             breedDropdown.innerHTML = '<option value="" disabled selected>Select Breed</option>';
             ageDropdown.innerHTML = '<option value="" disabled selected>Select Age</option>';
+
+            // Hide the custom breed input when changing animal type
+            var customBreedInput = document.getElementById('custom_breed');
+            if (customBreedInput) {
+                customBreedInput.style.display = 'none';
+                customBreedInput.required = false;
+                customBreedInput.value = '';
+            }
 
             if (breedOptions[typeSelected]) {
                 breedOptions[typeSelected].forEach(function(breed) {
