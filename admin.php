@@ -399,7 +399,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     </select>
                     
                     <!-- Hidden custom breed input -->
-                    <input type="text" name="custom_breed" id="custom_breed" placeholder="Type custom breed" style="display: none;">
+                    <input type="text" name="custom_breed" id="custom_breed" placeholder="Please indicate breed" style="display: none;">
                     
                     <select name="age" id="pet_age" required>
                         <option value="" disabled selected>Select type first</option>
