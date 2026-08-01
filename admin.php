@@ -664,176 +664,133 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             </script>
         </div>
 
-        <div class="content-box">
-        <h2>User Submitted Lost Pets</h2>
-        
-        <!-- TABS UI -->
-        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
-            <button type="button" id="admin-tab-missing" style="padding: 8px 20px; border: none; background: var(--danger); color: white; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchAdminLostTab('missing')">
-                <i class="fas fa-search"></i> Active Missing Reports
-            </button>
-            <button type="button" id="admin-tab-found" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchAdminLostTab('found')">
-                <i class="fas fa-check-circle"></i> Resolved (Found)
-            </button>
-        </div>
-
         <div id="lost-found" class="section">
-            <div class="content-box" style="box-shadow: none; padding: 0;">
-                <h3 style="border-bottom: none;">User Submitted Lost Pets</h3>
-                
-                <!-- TABS UI -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
-                    <button type="button" id="admin-tab-missing" style="padding: 8px 20px; border: none; background: var(--danger); color: white; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchAdminLostTab('missing')">
-                        <i class="fas fa-search"></i> Active Missing Reports
-                    </button>
-                    <button type="button" id="admin-tab-found" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchAdminLostTab('found')">
-                        <i class="fas fa-check-circle"></i> Resolved (Found)
-                    </button>
-                </div>
-
-                <!-- MISSING TABLE -->
-                <div id="admin-table-missing" style="display: block; overflow-x: auto;">
-                    <table class="data-table" style="margin-top: 0;">
-                        <thead>
-                            <tr style="background-color: var(--primary-color); color: white;">
-                                <th>PHOTO</th>
-                                <th>PET NAME</th>
-                                <th>LOCATION</th>
-                                <th>CONTACT</th>
-                                <th>DETAILS</th>
-                                <th style="text-align: center;">ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            $missing = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' ORDER BY id DESC");
-                            if($missing && $missing->rowCount() > 0) {
-                                while($row = $missing->fetch(PDO::FETCH_ASSOC)) {
-                                    echo "<tr>";
-                                    echo "<td><img src='{$row['photo_path']}' style='width: 50px; height: 50px; object-fit: cover; border-radius: 4px;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
-                                    echo "<td style='font-weight: bold; color: var(--primary-color);'>" . htmlspecialchars($row['pet_name']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['location']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
-                                    
-                                    echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
-                                    
-                                    echo "<td style='display: flex; gap: 5px; justify-content: center;'>
-                                            <form method='POST' style='margin:0;'>
-                                                <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
-                                                <button type='submit' name='mark_found' class='btn-save' style='background: var(--primary-color);'>Mark Found</button>
-                                            </form>
-                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this report?');\">
-                                                <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
-                                                <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
-                                            </form>
-                                          </td>";
-                                    echo "</tr>";
-                                }
-                            } else {
-                                echo "<tr><td colspan='6' style='padding: 15px; text-align: center; color: #666;'>No active missing reports.</td></tr>";
-                            }
-                            ?>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- FOUND TABLE -->
-                <div id="admin-table-found" style="display: none; overflow-x: auto;">
-                    <table class="data-table" style="margin-top: 0;">
-                        <thead>
-                            <tr style="background-color: var(--success); color: white;">
-                                <th>PHOTO</th>
-                                <th>PET NAME</th>
-                                <th>LOCATION</th>
-                                <th>CONTACT</th>
-                                <th>DETAILS</th>
-                                <th style="text-align: center;">ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            $found = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
-                            if($found && $found->rowCount() > 0) {
-                                while($row = $found->fetch(PDO::FETCH_ASSOC)) {
-                                    echo "<tr style='background-color: #f8f9fa;'>";
-                                    echo "<td><img src='{$row['photo_path']}' style='width: 50px; height: 50px; object-fit: cover; border-radius: 4px; opacity: 0.7;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
-                                    echo "<td style='color: #666;'><del>" . htmlspecialchars($row['pet_name']) . "</del></td>";
-                                    echo "<td style='color: #666;'>" . htmlspecialchars($row['location']) . "</td>";
-                                    echo "<td style='color: #666;'>" . htmlspecialchars($row['contact_number']) . "</td>";
-                                    echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #666;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
-                                    
-                                    echo "<td style='display: flex; justify-content: center;'>
-                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this resolved report?');\">
-                                                <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
-                                                <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
-                                            </form>
-                                          </td>";
-                                    echo "</tr>";
-                                }
-                            } else {
-                                echo "<tr><td colspan='6' style='padding: 15px; text-align: center; color: #666;'>No found pets yet.</td></tr>";
-                            }
-                            ?>
-                        </tbody>
-                    </table>
-                </div>
-
-                <script>
-                function switchAdminLostTab(tabName) {
-                    var btnMissing = document.getElementById('admin-tab-missing');
-                    var btnFound = document.getElementById('admin-tab-found');
-                    var tableMissing = document.getElementById('admin-table-missing');
-                    var tableFound = document.getElementById('admin-table-found');
-                    
-                    if (tabName === 'missing') {
-                        btnMissing.style.background = 'var(--danger)';
-                        btnMissing.style.color = 'white';
-                        btnFound.style.background = '#e2e6ea';
-                        btnFound.style.color = '#333';
-                        
-                        tableMissing.style.display = 'block';
-                        tableFound.style.display = 'none';
-                    } else {
-                        btnFound.style.background = 'var(--success)';
-                        btnFound.style.color = 'white';
-                        btnMissing.style.background = '#e2e6ea';
-                        btnMissing.style.color = '#333';
-                        
-                        tableFound.style.display = 'block';
-                        tableMissing.style.display = 'none';
-                    }
-                }
-                </script>
-            </div>
-        </div>
-
-        <script>
-        function switchAdminLostTab(tabName) {
-            var btnMissing = document.getElementById('admin-tab-missing');
-            var btnFound = document.getElementById('admin-tab-found');
-            var tableMissing = document.getElementById('admin-table-missing');
-            var tableFound = document.getElementById('admin-table-found');
+            <h3 style="color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">User Submitted Lost Pets</h3>
             
-            if (tabName === 'missing') {
-                btnMissing.style.background = 'var(--danger)';
-                btnMissing.style.color = 'white';
-                btnFound.style.background = '#e2e6ea';
-                btnFound.style.color = '#333';
+            <!-- TABS UI -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+                <button type="button" id="admin-tab-missing" style="padding: 8px 20px; border: none; background: var(--danger); color: white; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchAdminLostTab('missing')">
+                    <i class="fas fa-search"></i> Active Missing Reports
+                </button>
+                <button type="button" id="admin-tab-found" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchAdminLostTab('found')">
+                    <i class="fas fa-check-circle"></i> Resolved (Found)
+                </button>
+            </div>
+
+            <!-- MISSING TABLE -->
+            <div id="admin-table-missing" style="display: block; overflow-x: auto;">
+                <table class="data-table" style="margin-top: 0;">
+                    <thead>
+                        <tr style="background-color: var(--primary-color); color: white;">
+                            <th>PHOTO</th>
+                            <th>PET NAME</th>
+                            <th>LOCATION</th>
+                            <th>CONTACT</th>
+                            <th>DETAILS</th>
+                            <th style="text-align: center;">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $missing = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' ORDER BY id DESC");
+                        if($missing && $missing->rowCount() > 0) {
+                            while($row = $missing->fetch(PDO::FETCH_ASSOC)) {
+                                echo "<tr>";
+                                echo "<td><img src='{$row['photo_path']}' style='width: 50px; height: 50px; object-fit: cover; border-radius: 4px;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
+                                echo "<td style='font-weight: bold; color: var(--primary-color);'>" . htmlspecialchars($row['pet_name']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['location']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
+                                
+                                echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
+                                
+                                echo "<td style='display: flex; gap: 5px; justify-content: center;'>
+                                        <form method='POST' style='margin:0;'>
+                                            <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
+                                            <button type='submit' name='mark_found' class='btn-save' style='background: var(--primary-color);'>Mark Found</button>
+                                        </form>
+                                        <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this report?');\">
+                                            <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
+                                            <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
+                                        </form>
+                                      </td>";
+                                echo "</tr>";
+                            }
+                        } else {
+                            echo "<tr><td colspan='6' style='padding: 15px; text-align: center; color: #666;'>No active missing reports.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- FOUND TABLE -->
+            <div id="admin-table-found" style="display: none; overflow-x: auto;">
+                <table class="data-table" style="margin-top: 0;">
+                    <thead>
+                        <tr style="background-color: var(--success); color: white;">
+                            <th>PHOTO</th>
+                            <th>PET NAME</th>
+                            <th>LOCATION</th>
+                            <th>CONTACT</th>
+                            <th>DETAILS</th>
+                            <th style="text-align: center;">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $found = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
+                        if($found && $found->rowCount() > 0) {
+                            while($row = $found->fetch(PDO::FETCH_ASSOC)) {
+                                echo "<tr style='background-color: #f8f9fa;'>";
+                                echo "<td><img src='{$row['photo_path']}' style='width: 50px; height: 50px; object-fit: cover; border-radius: 4px; opacity: 0.7;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
+                                echo "<td style='color: #666;'><del>" . htmlspecialchars($row['pet_name']) . "</del></td>";
+                                echo "<td style='color: #666;'>" . htmlspecialchars($row['location']) . "</td>";
+                                echo "<td style='color: #666;'>" . htmlspecialchars($row['contact_number']) . "</td>";
+                                echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #666;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
+                                
+                                echo "<td style='display: flex; justify-content: center;'>
+                                        <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this resolved report?');\">
+                                            <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
+                                            <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
+                                        </form>
+                                      </td>";
+                                echo "</tr>";
+                            }
+                        } else {
+                            echo "<tr><td colspan='6' style='padding: 15px; text-align: center; color: #666;'>No found pets yet.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <script>
+            function switchAdminLostTab(tabName) {
+                var btnMissing = document.getElementById('admin-tab-missing');
+                var btnFound = document.getElementById('admin-tab-found');
+                var tableMissing = document.getElementById('admin-table-missing');
+                var tableFound = document.getElementById('admin-table-found');
                 
-                tableMissing.style.display = 'block';
-                tableFound.style.display = 'none';
-            } else {
-                btnFound.style.background = 'var(--success)';
-                btnFound.style.color = 'white';
-                btnMissing.style.background = '#e2e6ea';
-                btnMissing.style.color = '#333';
-                
-                tableFound.style.display = 'block';
-                tableMissing.style.display = 'none';
+                if (tabName === 'missing') {
+                    btnMissing.style.background = 'var(--danger)';
+                    btnMissing.style.color = 'white';
+                    btnFound.style.background = '#e2e6ea';
+                    btnFound.style.color = '#333';
+                    
+                    tableMissing.style.display = 'block';
+                    tableFound.style.display = 'none';
+                } else {
+                    btnFound.style.background = 'var(--success)';
+                    btnFound.style.color = 'white';
+                    btnMissing.style.background = '#e2e6ea';
+                    btnMissing.style.color = '#333';
+                    
+                    tableFound.style.display = 'block';
+                    tableMissing.style.display = 'none';
+                }
             }
-        }
-        </script>
-    </div>
+            </script>
+        </div>
 
         <div id="shelter-status" class="section">
             <h3>Update Shelter Details</h3>
