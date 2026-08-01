@@ -703,15 +703,18 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
                                 
-                                echo "<td style='display: flex; gap: 5px; justify-content: center;'>
-                                        <form method='POST' style='margin:0;'>
-                                            <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
-                                            <button type='submit' name='mark_found' class='btn-save' style='background: var(--primary-color);'>Mark Found</button>
-                                        </form>
-                                        <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this report?');\">
-                                            <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
-                                            <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
-                                        </form>
+                                // FIX: Wrapped buttons in a div instead of applying flex to the td
+                                echo "<td>
+                                        <div style='display: flex; gap: 5px; justify-content: center;'>
+                                            <form method='POST' style='margin:0;'>
+                                                <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
+                                                <button type='submit' name='mark_found' class='btn-save' style='background: var(--primary-color);'>Mark Found</button>
+                                            </form>
+                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this report?');\">
+                                                <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
+                                                <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
+                                            </form>
+                                        </div>
                                       </td>";
                                 echo "</tr>";
                             }
@@ -748,11 +751,14 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 echo "<td style='color: #666;'>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #666;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
                                 
-                                echo "<td style='display: flex; justify-content: center;'>
-                                        <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this resolved report?');\">
-                                            <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
-                                            <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
-                                        </form>
+                                // FIX: Wrapped button in a div instead of applying flex to the td
+                                echo "<td>
+                                        <div style='display: flex; justify-content: center;'>
+                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Delete this resolved report?');\">
+                                                <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
+                                                <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
+                                            </form>
+                                        </div>
                                       </td>";
                                 echo "</tr>";
                             }
