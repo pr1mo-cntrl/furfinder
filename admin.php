@@ -1,7 +1,7 @@
 <?php
 include 'db.php';
 
-// 1. CRITICAL FIX: Start session and verify admin BEFORE any data can be modified
+// FIX: Start session and verify admin BEFORE any data can be modified
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
