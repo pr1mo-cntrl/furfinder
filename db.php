@@ -1,17 +1,23 @@
 <?php
-session_start();
-$uri = "postgresql://postgres.hmsmjxdkvaklpuvsrdfv:REDACTED_ROTATED@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres";
-
-$db_parsed = parse_url($uri);
-$host = $db_parsed['host'];
-$port = $db_parsed['port'];
-$dbname = ltrim($db_parsed['path'], '/');
-$user = $db_parsed['user'];
-$pass = $db_parsed['pass'];
+// Supabase PostgreSQL Database Connection
+$host = "aws-0-ap-southeast-1.pooler.supabase.com"; // Supabase connection pooler
+$port = "6543";
+$dbname = "postgres";
+$user = "postgres.your_project_id";
+$password = "your_secure_supabase_password";
 
 try {
-    $conn = new PDO("pgsql:host=$host;port=$port;dbname=$dbname;user=$user;password=$pass");
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
+    $conn = new PDO($dsn, $user, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+    ]);
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }
+
+// Session Tracking
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+?>
