@@ -118,18 +118,80 @@ if (isset($_POST['login'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | FurFinder</title>
     <style>
-        body { font-family: 'Open Sans', sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; box-sizing: border-box; }
-        input, select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
-        button { width: 100%; padding: 12px; background: #003366; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; margin-top: 10px; }
-        button:hover { background: #d4af37; color: #003366; }
-        .toggle { margin-top: 15px; font-size: 0.9rem; color: #003366; cursor: pointer; text-decoration: underline; }
-        .section-label { text-align: left; font-size: 0.85rem; color: #666; font-weight: bold; margin-top: 10px; margin-bottom: -5px; }
-        .message { padding: 10px; border-radius: 4px; margin-bottom: 10px; font-size: 0.9rem; text-align: left; }
+        :root {
+            --primary-color: #003366;
+            --accent-color: #d4af37;
+            --border-color: #dfe3e6;
+            --radius: 6px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Open Sans', 'Segoe UI', sans-serif;
+            background: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 2.25rem 2rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .container h2 { color: var(--primary-color); font-size: 1.4rem; letter-spacing: -0.01em; }
+        label, .section-label { text-align: left; font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; margin-top: 12px; margin-bottom: -2px; display: block; }
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            margin: 8px 0;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0,51,102,0.1);
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-top: 14px;
+            transition: background-color 0.15s ease;
+        }
+        button:hover { background: var(--accent-color); color: var(--primary-color); }
+        .toggle { margin-top: 18px; font-size: 0.85rem; color: var(--primary-color); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+        .toggle:hover { color: var(--accent-color); }
+        .message { padding: 10px 12px; border-radius: var(--radius); margin-bottom: 12px; font-size: 0.85rem; text-align: left; }
         .message.error { background: #fdecea; color: #b3261e; border: 1px solid #f5c6c2; }
         .message.success { background: #eaf7ed; color: #1e7b34; border: 1px solid #c3e6cb; }
+
+        @media (max-width: 480px) {
+            body { padding: 16px; align-items: flex-start; padding-top: 40px; }
+            .container { padding: 1.75rem 1.25rem; }
+        }
     </style>
 </head>
 <body>

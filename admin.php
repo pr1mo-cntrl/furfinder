@@ -204,105 +204,129 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary-color: #003366; 
-            --accent-color: #d4af37; 
+            --primary-color: #003366;
+            --accent-color: #d4af37;
             --bg-light: #f4f7f6;
             --text-dark: #333;
             --white: #ffffff;
             --danger: #dc3545;
-            --success: #28a745; 
+            --success: #28a745;
+            --border-color: #e2e5e9;
+            --radius: 6px;
+            --shadow-sm: 0 1px 2px rgba(16,24,40,0.06);
+            --shadow-md: 0 1px 3px rgba(16,24,40,0.08), 0 4px 12px rgba(16,24,40,0.06);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Open Sans', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Open Sans', 'Segoe UI', sans-serif; }
         body { display: flex; min-height: 100vh; background-color: var(--bg-light); color: var(--text-dark); }
-        
+
         .sidebar {
-            width: 250px;
+            width: 240px;
             background-color: var(--primary-color);
             color: var(--white);
             padding: 20px 0;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.3);
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
             position: sticky;
             top: 0;
             height: 100vh;
+            z-index: 100;
         }
-        .sidebar h2 { text-align: center; margin-bottom: 30px; color: var(--accent-color); font-size: 1.6rem; }
+        .sidebar h2 { text-align: center; margin-bottom: 30px; color: var(--accent-color); font-size: 1.4rem; font-weight: 700; letter-spacing: -0.01em; }
         .sidebar ul { list-style: none; padding: 0; width: 100%; }
         .sidebar ul li a {
             display: block;
-            padding: 15px 20px;
-            color: var(--white);
+            padding: 13px 20px;
+            color: rgba(255,255,255,0.85);
             text-decoration: none;
-            transition: background-color 0.3s;
-            border-left: 5px solid transparent;
+            font-size: 0.92rem;
+            font-weight: 500;
+            transition: background-color 0.15s ease, color 0.15s ease;
+            border-left: 3px solid transparent;
         }
         .sidebar ul li a:hover, .sidebar ul li a.active {
-            background-color: rgba(255,255,255,0.1);
+            background-color: rgba(255,255,255,0.08);
             border-left-color: var(--accent-color);
-            color: var(--accent-color);
+            color: var(--white);
         }
         .sidebar .logout { margin-top: auto; }
-        .sidebar .logout a { color: var(--danger); }
-        .sidebar .logout a:hover { background-color: rgba(220, 53, 69, 0.2); border-left-color: var(--danger); }
+        .sidebar .logout a { color: #ff8a94; }
+        .sidebar .logout a:hover { background-color: rgba(220, 53, 69, 0.15); border-left-color: var(--danger); color: white; }
+        .sidebar-toggle { display: none; }
 
         .content {
             flex-grow: 1;
-            padding: 40px;
-            overflow: sticky;
+            padding: 32px 40px;
             display: block;
+            min-width: 0;
         }
         .section {
             background: var(--white);
-            padding: 30px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
-            display: none; 
+            padding: 28px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+            display: none;
         }
         .section.active { display: block; }
-        .section h3 { margin-bottom: 20px; color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        
+        .section h3 { margin-bottom: 18px; color: var(--primary-color); font-size: 1.15rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+
         .dashboard-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
             width: 100%;
         }
         .card {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            text-align: center;
+            padding: 18px 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            text-align: left;
         }
-        .card h3 { margin-bottom: 10px; font-size: 1.1rem; color: #666; }
-        .card p { font-size: 2.5rem; font-weight: bold; margin: 0; }
+        .card h3 { margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: #767e89; }
+        .card p { font-size: 2.1rem; font-weight: 700; margin: 0; color: var(--primary-color); }
 
-        .form-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
-        .form-row input, .form-row select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; }
-        .btn-add { background: var(--success); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
-        .btn-delete { background: var(--danger); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
-        .btn-save { background: var(--primary-color); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+        .form-row { display: flex; gap: 12px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
+        .form-row input, .form-row select { padding: 9px 12px; border: 1px solid var(--border-color); border-radius: var(--radius); flex: 1; font-size: 0.9rem; }
+        .btn-add { background: var(--success); color: white; border: none; padding: 10px 20px; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+        .btn-delete { background: var(--danger); color: white; border: none; padding: 7px 12px; border-radius: var(--radius); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+        .btn-save { background: var(--primary-color); color: white; border: none; padding: 7px 12px; border-radius: var(--radius); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 
-        .status-btn { border: 1px solid #ccc; background: #f1f1f1; color: #555; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.15s ease; }
-        .status-btn:hover { opacity: 0.85; }
+        .status-btn { border: 1px solid var(--border-color); background: #f8f9fa; color: #555; padding: 6px 12px; border-radius: var(--radius); cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: all 0.15s ease; }
+        .status-btn:hover { border-color: #bbb; }
         .status-btn-pending.active { background: #fff3cd; color: #856404; border-color: #ffeeba; }
         .status-btn-approved.active { background: var(--success); color: white; border-color: var(--success); }
         .status-btn-rejected.active { background: var(--danger); color: white; border-color: var(--danger); }
 
-        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .data-table th, .data-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle; }
-        .data-table th { background-color: var(--primary-color); color: var(--white); font-weight: 600; text-transform: uppercase; }
-        .data-table tr:nth-child(even) { background-color: #f9f9f9; }
-        .app-status select, .shelter-update select, .shelter-update input { padding: 5px; border-radius: 4px; }
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .data-table { width: 100%; min-width: 640px; border-collapse: collapse; margin-top: 16px; font-size: 0.9rem; }
+        .data-table th, .data-table td { padding: 11px 15px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .data-table th { background-color: #f8f9fa; color: #4a5568; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.03em; border-bottom: 1px solid var(--border-color); }
+        .data-table tr:hover { background-color: #fafbfc; }
+        .app-status select, .shelter-update select, .shelter-update input { padding: 5px; border-radius: var(--radius); }
         .app-status { display: flex; gap: 5px; }
         .shelter-update input { width: 100px; }
-        
-        .doc-link { color: var(--primary-color); text-decoration: underline; font-size: 0.85rem; display: block; margin-bottom: 3px;}
+
+        .doc-link { color: var(--primary-color); text-decoration: underline; text-underline-offset: 2px; font-size: 0.85rem; display: block; margin-bottom: 3px;}
         .doc-link:hover { color: var(--accent-color); }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; position: sticky; padding: 12px 0; flex-direction: row; align-items: center; flex-wrap: wrap; }
+            .sidebar h2 { display: none; }
+            .sidebar ul { display: flex; flex-wrap: wrap; width: auto; }
+            .sidebar ul li a { padding: 10px 14px; border-left: none; border-bottom: 3px solid transparent; font-size: 0.85rem; }
+            .sidebar ul li a:hover, .sidebar ul li a.active { border-left-color: transparent; border-bottom-color: var(--accent-color); }
+            .sidebar .logout { margin-top: 0; margin-left: auto; }
+            .content { padding: 20px; }
+            .section { padding: 18px; }
+            .dashboard-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+            .card p { font-size: 1.6rem; }
+        }
 
         .modal {
             display: none; 
@@ -320,12 +344,12 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         .modal-content {
             background-color: #fefefe;
             margin: 10% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 90%; 
-            max-width: 500px; 
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 500px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
             position: relative;
         }
         #appDetailsModal .modal-content {
@@ -333,17 +357,23 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             overflow-y: auto;
             max-width: 600px;
         }
-        
-        .close-modal { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-        .close-modal:hover { color: black; }
-        .modal-content label { display: block; margin-top: 15px; font-weight: 600; }
-        .modal-content input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
-        .modal-content .btn-primary { margin-top: 20px; width: 100%; padding: 10px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer; }
 
-        .btn-view { background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-top: 5px; width: 100%; }
+        .close-modal { color: #aaa; float: right; font-size: 26px; font-weight: bold; cursor: pointer; line-height: 1; }
+        .close-modal:hover { color: black; }
+        .modal-content label { display: block; margin-top: 15px; font-weight: 600; font-size: 0.85rem; color: #555; }
+        .modal-content input { width: 100%; padding: 9px 12px; margin-top: 5px; border: 1px solid var(--border-color); border-radius: var(--radius); }
+        .modal-content .btn-primary { margin-top: 20px; width: 100%; padding: 10px; background: var(--primary-color); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600; }
+
+        .btn-view { background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: var(--radius); cursor: pointer; font-size: 0.8rem; margin-top: 5px; width: 100%; font-weight: 600; }
         .btn-view:hover { background: #138496; }
-        .detail-row { display: flex; border-bottom: 1px solid #eee; padding: 10px 0; }
+        .detail-row { display: flex; border-bottom: 1px solid #eee; padding: 10px 0; gap: 10px; }
         .detail-label { font-weight: bold; width: 180px; color: var(--primary-color); flex-shrink: 0; }
+
+        @media (max-width: 600px) {
+            .modal-content { width: 94%; margin: 6% auto; padding: 18px; }
+            .detail-row { flex-direction: column; gap: 2px; }
+            .detail-label { width: auto; }
+        }
         .detail-value { color: #333; flex-grow: 1; }
     </style>
 </head>
@@ -439,6 +469,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             </form>
 
             <h3 style="margin-top:40px;">Current Adoptable Pets</h3>
+            <div class="table-responsive">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -487,6 +518,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     <?php endwhile; ?>
                 </tbody>
             </table>
+            </div>
         </div>
 
         <div id="archives" class="section">
@@ -508,6 +540,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
 
             <!-- ARCHIVED PETS TABLE -->
             <div id="archive-table-pets" style="display: block; overflow-x: auto;">
+                <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
                         <tr style="background-color: var(--primary-color); color: white;">
@@ -544,10 +577,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         ?>
                     </tbody>
                 </table>
+                </div>
+            </div>
             </div>
 
             <!-- ARCHIVED APPLICATIONS TABLE -->
             <div id="archive-table-apps" style="display: none; overflow-x: auto;">
+                <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
                         <tr style="background-color: var(--primary-color); color: white;">
@@ -582,10 +618,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         ?>
                     </tbody>
                 </table>
+                </div>
+            </div>
             </div>
 
             <!-- ARCHIVED LOST & FOUND TABLE -->
             <div id="archive-table-lost" style="display: none; overflow-x: auto;">
+                <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
                         <tr style="background-color: var(--primary-color); color: white;">
@@ -622,6 +661,8 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         ?>
                     </tbody>
                 </table>
+                </div>
+            </div>
             </div>
 
             <script>
@@ -696,6 +737,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 <button type="button" class="app-tab-btn" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="filterApps('rejected', this)">Rejected / Completed</button>
             </div>
 
+            <div class="table-responsive">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -763,6 +805,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     <?php endwhile; ?>
                 </tbody>
             </table>
+            </div>
             
             <script>
             function filterApps(status, btn) {
@@ -805,6 +848,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
 
             <!-- MISSING TABLE -->
             <div id="admin-table-missing" style="display: block; overflow-x: auto;">
+                <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
                         <tr style="background-color: var(--primary-color); color: white;">
@@ -851,10 +895,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         ?>
                     </tbody>
                 </table>
+                </div>
+            </div>
             </div>
 
             <!-- FOUND TABLE -->
             <div id="admin-table-found" style="display: none; overflow-x: auto;">
+                <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
                         <tr style="background-color: var(--success); color: white;">
@@ -895,6 +942,8 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         ?>
                     </tbody>
                 </table>
+                </div>
+            </div>
             </div>
 
             <script>
@@ -927,6 +976,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
 
         <div id="shelter-status" class="section">
             <h3>Update Shelter Details</h3>
+            <div class="table-responsive">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -961,6 +1011,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     <?php endwhile; ?>
                 </tbody>
             </table>
+            </div>
         </div>
     </div> 
     
