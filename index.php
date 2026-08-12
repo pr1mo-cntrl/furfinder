@@ -145,8 +145,10 @@ if (isset($_POST['submit_lost_report'])) {
             header("Location: index.php?tab=lost");
             exit();
         } else {
-            $error_details = json_encode($response);
-            echo "<script>alert('Supabase Error! Code: " . $http_code . " | Details: ' + " . $error_details . ");</script>";
+            error_log("Supabase upload failed (HTTP $http_code): $response");
+            $_SESSION['flash_error'] = "We couldn't upload your photo right now. Please try again in a moment.";
+            header("Location: index.php?tab=lost");
+            exit();
         }
     }
 }
@@ -356,6 +358,16 @@ if ($progress_percent > 100) $progress_percent = 100;
         .close-modal { float: right; font-size: 26px; cursor: pointer; color: #aaa; position: absolute; right: 18px; top: 12px; line-height: 1; }
         .close-modal:hover { color: #555; }
 
+        .confirm-modal-content { max-width: 400px; text-align: center; }
+        .confirm-modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .confirm-modal-actions button { margin: 0; }
+        .btn-neutral { background-color: #6c757d; color: white; border: none; padding: 11px; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 0.95rem; flex: 1; }
+        .btn-neutral:hover { background-color: #5a6268; }
+        .confirm-modal-actions .btn-primary { flex: 1; margin-top: 0; }
+
+        #app-toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px); background: var(--primary-color); color: white; padding: 12px 22px; border-radius: var(--radius); box-shadow: var(--shadow-md); font-size: 0.9rem; font-weight: 500; z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
+        #app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             nav { padding: 1rem; }
@@ -449,12 +461,18 @@ if ($progress_percent > 100) $progress_percent = 100;
         </ul>
     </nav>
 
-    <?php if(isset($_SESSION['flash_msg'])): ?>
-    <div id="flash-banner" style="position: fixed; top: 90px; right: 20px; z-index: 9999; background: var(--success); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 15px; transition: opacity 0.5s ease;">
-        <i class="fas fa-check-circle" style="font-size: 1.5rem;"></i>
+    <?php if(isset($_SESSION['flash_msg']) || isset($_SESSION['flash_error'])):
+        $is_error = isset($_SESSION['flash_error']);
+        $flash_text = $is_error ? $_SESSION['flash_error'] : $_SESSION['flash_msg'];
+        $flash_bg = $is_error ? 'var(--danger)' : 'var(--success)';
+        $flash_icon = $is_error ? 'fa-circle-exclamation' : 'fa-check-circle';
+        $flash_title = $is_error ? 'Something went wrong' : 'Success!';
+    ?>
+    <div id="flash-banner" style="position: fixed; top: 90px; right: 20px; z-index: 9999; background: <?php echo $flash_bg; ?>; color: white; padding: 15px 25px; border-radius: var(--radius); box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 15px; transition: opacity 0.5s ease;">
+        <i class="fas <?php echo $flash_icon; ?>" style="font-size: 1.5rem;"></i>
         <div>
-            <h4 style="margin: 0; color: white;">Success!</h4>
-            <p style="margin: 0; font-size: 0.9rem;"><?php echo $_SESSION['flash_msg']; ?></p>
+            <h4 style="margin: 0; color: white;"><?php echo $flash_title; ?></h4>
+            <p style="margin: 0; font-size: 0.9rem;"><?php echo htmlspecialchars($flash_text); ?></p>
         </div>
         <button onclick="this.parentElement.style.opacity='0'; setTimeout(()=>this.parentElement.style.display='none', 500);" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; margin-left: 10px;">&times;</button>
     </div>
@@ -467,7 +485,7 @@ if ($progress_percent > 100) $progress_percent = 100;
             }
         }, 5000);
     </script>
-    <?php unset($_SESSION['flash_msg']); endif; ?>
+    <?php unset($_SESSION['flash_msg']); unset($_SESSION['flash_error']); endif; ?>
 
 <section id="home" class="container active">
         <div class="hero">
@@ -652,15 +670,15 @@ if ($progress_percent > 100) $progress_percent = 100;
                             <span style="font-size: 0.85rem; color: #666;">Reported Missing</span>
                         </div>
                         <div class="active-report-actions" style="display: flex; gap: 8px;">
-                            <form method="POST" style="margin: 0;">
+                            <form method="POST" style="margin: 0;" class="js-confirm" data-confirm-msg="Are you sure you want to mark this pet as found?">
                                 <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
-                                <button type="submit" name="mark_as_found" class="btn-primary" style="background: var(--success); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to mark this pet as found?');">
+                                <button type="submit" name="mark_as_found" class="btn-primary" style="background: var(--success); margin: 0; padding: 8px 15px; font-size: 0.85rem;">
                                     <i class="fas fa-check"></i> Found
                                 </button>
                             </form>
-                            <form method="POST" style="margin: 0;">
+                            <form method="POST" style="margin: 0;" class="js-confirm" data-confirm-msg="Are you sure you want to permanently delete this report?">
                                 <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
-                                <button type="submit" name="delete_own_report" class="btn-primary" style="background: var(--danger); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to permanently delete this report?');">
+                                <button type="submit" name="delete_own_report" class="btn-primary" style="background: var(--danger); margin: 0; padding: 8px 15px; font-size: 0.85rem;">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                             </form>
@@ -684,7 +702,7 @@ if ($progress_percent > 100) $progress_percent = 100;
                     <strong><i class="fas fa-user-lock"></i> Privacy Notice:</strong><br>
                     Your contact information is kept strictly confidential. Only the <strong>CVAO Admin</strong> will be able to view your phone number to coordinate with you if your pet is found.
                 </div>
-                <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Are you sure you want to post this lost pet alert?');">
+                <form method="POST" enctype="multipart/form-data" class="js-confirm" data-confirm-msg="Are you sure you want to post this lost pet alert?">
                     <div class="form-group"><label>Pet Name</label><input type="text" name="lf_name" required></div>
                     <div class="form-group"><label>Location Last Seen</label><input type="text" name="lf_location" required></div>
                     <div class="form-group"><label>Time & Date Last Seen</label><input type="datetime-local" name="lf_time" id="lf_time_input" required></div>
@@ -939,12 +957,23 @@ if ($progress_percent > 100) $progress_percent = 100;
     </div>
 
     <div id="confirmSubmitModal" class="modal">
-        <div class="modal-content" style="max-width:400px; text-align:center;">
+        <div class="modal-content confirm-modal-content">
             <h3 style="margin-top:0;">Submit Application?</h3>
             <p style="color:#666;">Are you sure you want to submit this adoption application? Please verify that all your details and documents are correct.</p>
-            <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
-                <button type="button" class="btn-primary" style="background:#6c757d; margin:0;" onclick="closeConfirmSubmitModal()">Cancel</button>
-                <button type="button" class="btn-primary" style="margin:0;" onclick="confirmSubmitApplication()">Yes, Submit</button>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn-neutral" onclick="closeConfirmSubmitModal()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="confirmSubmitApplication()">Yes, Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="genericConfirmModal" class="modal">
+        <div class="modal-content confirm-modal-content">
+            <h3 style="margin-top:0;">Please Confirm</h3>
+            <p id="genericConfirmMessage" style="color:#666;">Are you sure?</p>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn-neutral" onclick="closeGenericConfirm()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="confirmGenericAction()">Yes, Continue</button>
             </div>
         </div>
     </div>
@@ -1037,6 +1066,24 @@ if ($progress_percent > 100) $progress_percent = 100;
             document.getElementById('adoptApplicationForm').submit();
         }
 
+        let pendingConfirmForm = null;
+        document.querySelectorAll('form.js-confirm').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                pendingConfirmForm = form;
+                document.getElementById('genericConfirmMessage').textContent = form.dataset.confirmMsg || 'Are you sure?';
+                document.getElementById('genericConfirmModal').style.display = 'flex';
+            });
+        });
+        function closeGenericConfirm() {
+            document.getElementById('genericConfirmModal').style.display = 'none';
+            pendingConfirmForm = null;
+        }
+        function confirmGenericAction() {
+            document.getElementById('genericConfirmModal').style.display = 'none';
+            if (pendingConfirmForm) { pendingConfirmForm.submit(); }
+        }
+
         function sharePet(name, breed) {
             if (navigator.share) {
                 navigator.share({
@@ -1044,7 +1091,26 @@ if ($progress_percent > 100) $progress_percent = 100;
                     text: 'Check out ' + name + ', a ' + breed + ' at FurFinder!',
                     url: window.location.href
                 }).catch(console.error);
-            } else { alert('Link copied!'); }
+            } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(window.location.href)
+                    .then(() => showToast('Link copied to clipboard!'))
+                    .catch(() => showToast('Could not copy link.'));
+            } else {
+                showToast('Sharing is not supported on this browser.');
+            }
+        }
+
+        function showToast(message) {
+            let toast = document.getElementById('app-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'app-toast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            toast.classList.add('show');
+            clearTimeout(toast._hideTimer);
+            toast._hideTimer = setTimeout(() => toast.classList.remove('show'), 2500);
         }
 
         function switchLfTab(tabName) {

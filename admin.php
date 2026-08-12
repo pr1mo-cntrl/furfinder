@@ -64,9 +64,11 @@ if (isset($_POST['add_pet'])) {
             header("Location: admin.php");
             exit();
         } else {
-            // Safe JSON encoding for JS alerts
-            $error_details = json_encode($response);
-            echo "<script>alert('Supabase Error! Code: " . $http_code . " | Details: ' + " . $error_details . ");</script>";
+            error_log("Supabase upload failed (HTTP $http_code): $response");
+            $_SESSION['admin_flash'] = "We couldn't upload that photo right now. Please try again.";
+            $_SESSION['admin_flash_type'] = 'error';
+            header("Location: admin.php");
+            exit();
         }
     }
 }
@@ -76,7 +78,9 @@ if (isset($_POST['delete_pet'])) {
     $id = $_POST['pet_id'];
     $stmt = $conn->prepare("UPDATE pets SET is_archived = 1 WHERE id = ?");
     $stmt->execute([$id]);
-    echo "<script>alert('Pet securely archived.'); window.location.href='admin.php';</script>";
+    $_SESSION['admin_flash'] = 'Pet securely archived.';
+    header("Location: admin.php");
+    exit();
 }
 
 // 3. Handle Shelter Update
@@ -85,10 +89,12 @@ if (isset($_POST['update_shelter'])) {
     $status = $_POST['status'];
     $email = $_POST['email'];
     $schedule = $_POST['schedule'];
-    
+
     $stmt = $conn->prepare("UPDATE shelters SET status = ?, email = ?, schedule = ? WHERE id = ?");
     $stmt->execute([$status, $email, $schedule, $id]);
-    echo "<script>alert('Shelter details updated!'); window.location.href='admin.php';</script>";
+    $_SESSION['admin_flash'] = 'Shelter details updated.';
+    header("Location: admin.php");
+    exit();
 }
 
 // 4. Handle Application Status Update (Removed duplicate block from top of file)
@@ -107,7 +113,9 @@ if (isset($_POST['mark_found'])) {
     $id = $_POST['lost_pet_id'];
     $stmt = $conn->prepare("UPDATE lost_pets SET status = 'Found' WHERE id = ?");
     $stmt->execute([$id]);
-    echo "<script>alert('Lost pet marked as Found!'); window.location.href='admin.php';</script>";
+    $_SESSION['admin_flash'] = 'Lost pet marked as found.';
+    header("Location: admin.php");
+    exit();
 }
 
 // 6. Handle Application Archive (Soft Delete)
@@ -115,7 +123,9 @@ if (isset($_POST['archive_application'])) {
     $id = $_POST['app_id'];
     $stmt = $conn->prepare("UPDATE applications SET is_archived = 1 WHERE id = ?");
     $stmt->execute([$id]);
-    echo "<script>alert('Application securely archived.'); window.location.href='admin.php';</script>";
+    $_SESSION['admin_flash'] = 'Application securely archived.';
+    header("Location: admin.php");
+    exit();
 }
 
 // 7. Handle Lost Pet Archiving (Soft Delete)
@@ -123,7 +133,9 @@ if (isset($_POST['delete_lost_pet'])) {
     $id = $_POST['lost_pet_id'];
     $stmt = $conn->prepare("UPDATE lost_pets SET is_archived = 1 WHERE id = ?");
     $stmt->execute([$id]);
-    echo "<script>alert('Lost pet post archived securely.'); window.location.href='admin.php';</script>";
+    $_SESSION['admin_flash'] = 'Lost pet post archived securely.';
+    header("Location: admin.php");
+    exit();
 }
 
 // Handle Restoring Lost Pets
@@ -131,7 +143,9 @@ if (isset($_POST['restore_lost_pet'])) {
     $id = $_POST['lost_pet_id'];
     $stmt = $conn->prepare("UPDATE lost_pets SET is_archived = 0 WHERE id = ?");
     $stmt->execute([$id]);
-    echo "<script>alert('Lost pet restored successfully.'); window.location.href='admin.php';</script>";
+    $_SESSION['admin_flash'] = 'Lost pet restored successfully.';
+    header("Location: admin.php");
+    exit();
 }
 
 // 8. Handle Pet Update
@@ -142,11 +156,12 @@ if (isset($_POST['update_pet'])) {
     $age = $_POST['edit_age'];
     $backstory = $_POST['edit_backstory'];
     $medical_history = $_POST['edit_medical_history'];
-    
+
     $stmt = $conn->prepare("UPDATE pets SET name=?, breed=?, age=?, backstory=?, medical_history=? WHERE id=?");
     if($stmt->execute([$name, $breed, $age, $backstory, $medical_history, $id])){
-        // FIX: Replaced empty echo with proper redirect
-        echo "<script>alert('Pet details updated successfully!'); window.location.href='admin.php';</script>";
+        $_SESSION['admin_flash'] = 'Pet details updated successfully.';
+        header("Location: admin.php");
+        exit();
     }
 }
 
@@ -155,7 +170,9 @@ if (isset($_POST['mark_adopted'])) {
     $id = $_POST['pet_id'];
     $stmt = $conn->prepare("UPDATE pets SET status = 'adopted' WHERE id = ?");
     if($stmt->execute([$id])){
-        echo "<script>alert('Awesome! Pet marked as adopted.'); window.location.href='admin.php';</script>";
+        $_SESSION['admin_flash'] = 'Pet marked as adopted.';
+        header("Location: admin.php");
+        exit();
     }
 }
 
@@ -164,14 +181,18 @@ if (isset($_POST['restore_pet'])) {
     $id = $_POST['pet_id'];
     $stmt = $conn->prepare("UPDATE pets SET is_archived = 0 WHERE id = ?");
     $stmt->execute([$id]);
-    echo "<script>alert('Pet restored successfully.'); window.location.href='admin.php';</script>";
+    $_SESSION['admin_flash'] = 'Pet restored successfully.';
+    header("Location: admin.php");
+    exit();
 }
 
 if (isset($_POST['restore_application'])) {
     $id = $_POST['app_id'];
     $stmt = $conn->prepare("UPDATE applications SET is_archived = 0 WHERE id = ?");
     $stmt->execute([$id]);
-    echo "<script>alert('Application restored successfully.'); window.location.href='admin.php';</script>";
+    $_SESSION['admin_flash'] = 'Application restored successfully.';
+    header("Location: admin.php");
+    exit();
 }
 
 // --- DESCRIPTIVE ANALYTICS DATA FETCHING ---
@@ -369,6 +390,12 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         .detail-row { display: flex; border-bottom: 1px solid #eee; padding: 10px 0; gap: 10px; }
         .detail-label { font-weight: bold; width: 180px; color: var(--primary-color); flex-shrink: 0; }
 
+        .confirm-modal-content { max-width: 400px; text-align: center; }
+        .confirm-modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .btn-neutral { background-color: #6c757d; color: white; border: none; padding: 10px; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 0.9rem; flex: 1; }
+        .btn-neutral:hover { background-color: #5a6268; }
+        .confirm-modal-actions .btn-primary { flex: 1; margin-top: 0; }
+
         @media (max-width: 600px) {
             .modal-content { width: 94%; margin: 6% auto; padding: 18px; }
             .detail-row { flex-direction: column; gap: 2px; }
@@ -379,9 +406,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
 </head>
 <body>
 
-    <?php if(isset($_SESSION['admin_flash'])): ?>
-    <div id="admin-flash-banner" style="position: fixed; top: 20px; right: 20px; z-index: 9999; background: var(--success); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 15px; transition: opacity 0.5s ease;">
-        <i class="fas fa-check-circle" style="font-size: 1.3rem;"></i>
+    <?php if(isset($_SESSION['admin_flash'])):
+        $admin_flash_is_error = (isset($_SESSION['admin_flash_type']) && $_SESSION['admin_flash_type'] === 'error');
+        $admin_flash_bg = $admin_flash_is_error ? 'var(--danger)' : 'var(--success)';
+        $admin_flash_icon = $admin_flash_is_error ? 'fa-circle-exclamation' : 'fa-check-circle';
+    ?>
+    <div id="admin-flash-banner" style="position: fixed; top: 20px; right: 20px; z-index: 9999; background: <?php echo $admin_flash_bg; ?>; color: white; padding: 15px 25px; border-radius: var(--radius); box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 15px; transition: opacity 0.5s ease;">
+        <i class="fas <?php echo $admin_flash_icon; ?>" style="font-size: 1.3rem;"></i>
         <span><?php echo htmlspecialchars($_SESSION['admin_flash']); ?></span>
         <button onclick="this.parentElement.style.opacity='0'; setTimeout(()=>this.parentElement.style.display='none', 500);" style="background: none; border: none; color: white; font-size: 1.3rem; cursor: pointer;">&times;</button>
     </div>
@@ -391,7 +422,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             if(banner) { banner.style.opacity = '0'; setTimeout(() => banner.style.display = 'none', 500); }
         }, 4000);
     </script>
-    <?php unset($_SESSION['admin_flash']); endif; ?>
+    <?php unset($_SESSION['admin_flash']); unset($_SESSION['admin_flash_type']); endif; ?>
 
     <div class="sidebar">
         <h2>Admin Panel</h2>
@@ -497,7 +528,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                             <td>
                                 <div style="display: flex; gap: 5px; align-items: center;">
                                     <?php if(strtolower($row['status']) != 'adopted'): ?>
-                                    <form method="POST" onsubmit="return confirm('Mark this pet as successfully adopted?');" style="margin:0;">
+                                    <form method="POST" class="js-confirm" data-confirm-msg="Mark this pet as successfully adopted?" style="margin:0;">
                                         <input type="hidden" name="pet_id" value="<?php echo $row['id']; ?>">
                                         <button type="submit" name="mark_adopted" class="btn-save" style="background-color: var(--success);">Adopted</button>
                                     </form>
@@ -508,7 +539,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                         Edit
                                     </button>
                                     
-                                    <form method="POST" onsubmit="return confirm('Are you sure you want to securely archive this pet?');" style="margin:0;">
+                                    <form method="POST" class="js-confirm" data-confirm-msg="Are you sure you want to securely archive this pet?" style="margin:0;">
                                         <input type="hidden" name="pet_id" value="<?php echo $row['id']; ?>">
                                         <button type="submit" name="delete_pet" class="btn-delete">Archive</button>
                                     </form>
@@ -796,7 +827,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 </form>
                             </td>
                             <td>
-                                <form method="POST" onsubmit="return confirm('Archive/Delete this application?');">
+                                <form method="POST" class="js-confirm" data-confirm-msg="Archive/Delete this application?">
                                     <input type="hidden" name="app_id" value="<?php echo $row['id']; ?>">
                                     <button type="submit" name="archive_application" class="btn-delete">Archive</button>
                                 </form>
@@ -881,7 +912,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                                 <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
                                                 <button type='submit' name='mark_found' class='btn-save' style='background: var(--primary-color);'>Mark Found</button>
                                             </form>
-                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Archive this report?');\">
+                                            <form method='POST' style='margin:0;' class='js-confirm' data-confirm-msg='Archive this report?'>
                                                 <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
                                                 <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
                                             </form>
@@ -928,7 +959,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 
                                 echo "<td>
                                         <div style='display: flex; justify-content: center;'>
-                                            <form method='POST' style='margin:0;' onsubmit=\"return confirm('Archive this resolved report?');\">
+                                            <form method='POST' style='margin:0;' class='js-confirm' data-confirm-msg='Archive this resolved report?'>
                                                 <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
                                                 <button type='submit' name='delete_lost_pet' class='btn-delete'><i class='fas fa-trash'></i></button>
                                             </form>
@@ -1043,6 +1074,37 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             <div id="appDetailsContent"></div>
         </div>
     </div>
+
+    <div id="genericConfirmModal" class="modal">
+        <div class="modal-content confirm-modal-content">
+            <h3 style="margin-top:0;">Please Confirm</h3>
+            <p id="genericConfirmMessage" style="color:#666;">Are you sure?</p>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn-neutral" onclick="closeGenericConfirm()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="confirmGenericAction()">Yes, Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pendingConfirmForm = null;
+        document.querySelectorAll('form.js-confirm').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                pendingConfirmForm = form;
+                document.getElementById('genericConfirmMessage').textContent = form.dataset.confirmMsg || 'Are you sure?';
+                document.getElementById('genericConfirmModal').style.display = 'flex';
+            });
+        });
+        function closeGenericConfirm() {
+            document.getElementById('genericConfirmModal').style.display = 'none';
+            pendingConfirmForm = null;
+        }
+        function confirmGenericAction() {
+            document.getElementById('genericConfirmModal').style.display = 'none';
+            if (pendingConfirmForm) { pendingConfirmForm.submit(); }
+        }
+    </script>
 
     <script>
         // Expanded breed lists (no "Other" needed, they can just type it!)
