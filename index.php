@@ -322,6 +322,12 @@ if ($progress_percent > 100) $progress_percent = 100;
 
         .badge-new { position: absolute; top: 10px; right: 10px; background: var(--accent-color); color: var(--primary-color); padding: 3px 10px; border-radius: var(--radius); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.02em; }
 
+        .pet-details details { margin-bottom: 15px; background: #f9f9f9; padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--border-color); }
+        .pet-details summary { cursor: pointer; font-weight: 600; color: var(--primary-color); outline: none; font-size: 0.85rem; list-style: none; display: flex; align-items: center; gap: 8px; }
+        .pet-details summary::-webkit-details-marker { display: none; }
+        .pet-details summary::before { content: "\f105"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 0.75rem; color: #999; transition: transform 0.15s ease; }
+        .pet-details details[open] summary::before { transform: rotate(90deg); }
+
         .lf-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 1.75rem; }
         .report-form { background: white; padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
         .missing-feed { display: flex; flex-direction: column; gap: 12px; }
@@ -600,10 +606,8 @@ if ($progress_percent > 100) $progress_percent = 100;
                             <h3 style='margin-bottom: 3px;'>" . htmlspecialchars($row['name']) . "</h3>
                             <p style='color: #666; font-size: 0.9rem; margin-bottom: 12px; font-weight: 600;'>" . htmlspecialchars($row['breed']) . " • " . htmlspecialchars($row['age']) . "</p>
                             
-                            <details style='margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eaeaea;'>
-                                <summary style='cursor: pointer; font-weight: bold; color: var(--primary-color); outline: none; font-size: 0.9rem;'>
-                                    <i class='fas fa-book-open'></i> Read My Story
-                                </summary>
+                            <details>
+                                <summary><i class='fas fa-book-open'></i> Read My Story</summary>
                                 <div style='margin-top: 12px; font-size: 0.85rem; color: #444;'>
                                     <p style='margin-bottom: 8px;'><strong>About Me:</strong><br> $backstory</p>
                                     <p style='border-top: 1px dashed #ccc; padding-top: 8px;'><strong><i class='fas fa-notes-medical' style='color: var(--danger);'></i> Health Info:</strong><br> $medical</p>
