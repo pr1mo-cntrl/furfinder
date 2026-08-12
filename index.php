@@ -858,7 +858,8 @@ if ($progress_percent > 100) $progress_percent = 100;
             <h3>Adopt <span id="adopt-pet-name"></span></h3>
             <p style="margin-bottom:15px; font-size:0.9rem; color:#666;">Please fill out the form honestly. No login required.</p>
             
-            <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Are you sure you want to submit this adoption application? Please verify that all your details and documents are correct.');">
+            <form method="POST" enctype="multipart/form-data" id="adoptApplicationForm">
+                <input type="hidden" name="submit_application" value="1">
                 <input type="hidden" id="app_pet_name" name="app_pet_name">
                 
                 <h4 style="color:var(--primary-color); border-bottom:1px solid #eee; margin-bottom:10px;">Personal Details</h4>
@@ -911,8 +912,19 @@ if ($progress_percent > 100) $progress_percent = 100;
                     <label style="display: block; margin-bottom: 5px;">3. Photo of Pet Cage or Secure Area</label>
                     <input type="file" name="cage_photo" accept="image/*" required style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
                 </div>
-                <button type="submit" name="submit_application" class="btn-primary">Submit Application</button>
+                <button type="button" class="btn-primary" onclick="return validateAndConfirmApplication()">Submit Application</button>
             </form>
+        </div>
+    </div>
+
+    <div id="confirmSubmitModal" class="modal">
+        <div class="modal-content" style="max-width:400px; text-align:center;">
+            <h3 style="margin-top:0;">Submit Application?</h3>
+            <p style="color:#666;">Are you sure you want to submit this adoption application? Please verify that all your details and documents are correct.</p>
+            <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+                <button type="button" class="btn-primary" style="background:#6c757d; margin:0;" onclick="closeConfirmSubmitModal()">Cancel</button>
+                <button type="button" class="btn-primary" style="margin:0;" onclick="confirmSubmitApplication()">Yes, Submit</button>
+            </div>
         </div>
     </div>
 
@@ -988,6 +1000,20 @@ if ($progress_percent > 100) $progress_percent = 100;
         }
         function closeAdoptModal() {
             document.getElementById('adoptModal').style.display = 'none';
+        }
+
+        function validateAndConfirmApplication() {
+            const form = document.getElementById('adoptApplicationForm');
+            if (!form.reportValidity()) return false;
+            document.getElementById('confirmSubmitModal').style.display = 'flex';
+            return false;
+        }
+        function closeConfirmSubmitModal() {
+            document.getElementById('confirmSubmitModal').style.display = 'none';
+        }
+        function confirmSubmitApplication() {
+            closeConfirmSubmitModal();
+            document.getElementById('adoptApplicationForm').submit();
         }
 
         function sharePet(name, breed) {
