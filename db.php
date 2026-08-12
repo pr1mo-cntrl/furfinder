@@ -1,6 +1,22 @@
 <?php
 session_start();
-$uri = "postgresql://postgres.hmsmjxdkvaklpuvsrdfv:REDACTED_ROTATED@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres";
+
+// Load DATABASE_URL from a local .env file if it's not already set as a real env var
+if (getenv('DATABASE_URL') === false) {
+    $envPath = __DIR__ . '/.env';
+    if (file_exists($envPath)) {
+        foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            if (strpos(trim($line), '#') === 0 || strpos($line, '=') === false) continue;
+            list($key, $value) = explode('=', $line, 2);
+            putenv(trim($key) . '=' . trim($value));
+        }
+    }
+}
+
+$uri = getenv('DATABASE_URL');
+if (!$uri) {
+    die("Database configuration missing. Set the DATABASE_URL environment variable (see .env.example).");
+}
 
 $db_parsed = parse_url($uri);
 $host = $db_parsed['host'];
