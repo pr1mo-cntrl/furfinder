@@ -757,7 +757,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
                 <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px;">
                     <h4 style="text-align:center; margin-bottom:15px; color:#555;">Active Population</h4>
-                    <div style="position: relative; height:250px;">
+                    <div style="position: relative; height:250px; max-width:280px; margin:0 auto;">
                         <canvas id="typeChart"></canvas>
                     </div>
                 </div>
@@ -768,10 +768,10 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         <canvas id="breedChart"></canvas>
                     </div>
                 </div>
-                
+
                 <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; grid-column: 1 / -1;">
                     <h4 style="text-align:center; margin-bottom:15px; color:#555;">Application Pipeline</h4>
-                    <div style="position: relative; height:250px; max-height: 300px; display: flex; justify-content: center;">
+                    <div style="position: relative; height:250px; max-height: 300px; max-width:280px; margin:0 auto;">
                         <canvas id="appChart"></canvas>
                     </div>
                 </div>
