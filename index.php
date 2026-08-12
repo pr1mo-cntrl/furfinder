@@ -314,9 +314,44 @@ if ($progress_percent > 100) $progress_percent = 100;
         .section-header { text-align: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
         img { max-width: 100%; height: auto; }
 
-        .hero { background: linear-gradient(rgba(0,40,80,0.55), rgba(0,40,80,0.75)), url('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80'); background-size: cover; background-position: center; padding: 3.5rem 2rem; border-radius: var(--radius); text-align: center; margin-bottom: 2rem; color: white; }
-        .hero h1 { color: white; font-size: 2.2rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
-        .hero p { color: #e8ecf0; font-size: 1.05rem; }
+        .hero {
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+            min-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(rgba(0,40,80,0.55), rgba(0,40,80,0.75)), url('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1600&q=80');
+            background-size: cover;
+            background-position: center;
+            text-align: center;
+            margin-bottom: 0;
+            padding: 3.5rem 2rem;
+            color: white;
+        }
+        .hero h1 { color: white; font-size: 3rem; font-weight: 800; letter-spacing: -0.02em; text-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+        .hero p { color: #e8ecf0; font-size: 1.15rem; max-width: 500px; }
+
+        .mission-band {
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 3.5rem 2rem;
+            margin-bottom: 2rem;
+        }
+        .mission-band h2 { color: white; font-size: 1.7rem; margin-bottom: 1rem; }
+        .mission-band p { color: rgba(255,255,255,0.85); font-size: 1.05rem; max-width: 640px; margin: 0 auto; line-height: 1.7; }
 
         .content-box { background: white; padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 2rem; box-shadow: var(--shadow-sm); }
         .ordinance-box { border-left: 3px solid var(--accent-color); }
@@ -526,6 +561,11 @@ if ($progress_percent > 100) $progress_percent = 100;
             </div>
             <?php endif; ?>
 
+        </div>
+
+        <div class="mission-band">
+            <h2>Our Mission</h2>
+            <p>We believe every stray and shelter animal in Baguio deserves a second chance. FurFinder connects rescued dogs and cats with loving adopters, and helps reunite lost pets with the families searching for them.</p>
         </div>
 
         <div id="shelter-section" class="content-box">
