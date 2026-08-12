@@ -309,6 +309,7 @@ if ($progress_percent > 100) $progress_percent = 100;
 
         .container { max-width: 1100px; margin: 2rem auto; padding: 0 20px; display: none; }
         .container.active { display: block; animation: fadeIn 0.4s ease-out forwards; }
+        #home.container { margin-top: 0; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         h1, h2, h3 { color: var(--primary-color); margin-bottom: 1rem; letter-spacing: -0.01em; }
         .section-header { text-align: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
