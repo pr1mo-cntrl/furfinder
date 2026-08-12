@@ -1107,10 +1107,16 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
 
     <script>
         let pendingConfirmForm = null;
+        let pendingConfirmSubmitter = null;
         document.querySelectorAll('form.js-confirm').forEach(function(form) {
             form.addEventListener('submit', function(e) {
+                if (form.dataset.confirmed === 'true') {
+                    form.dataset.confirmed = 'false';
+                    return;
+                }
                 e.preventDefault();
                 pendingConfirmForm = form;
+                pendingConfirmSubmitter = e.submitter;
                 document.getElementById('genericConfirmMessage').textContent = form.dataset.confirmMsg || 'Are you sure?';
                 document.getElementById('genericConfirmModal').style.display = 'flex';
             });
@@ -1118,10 +1124,18 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         function closeGenericConfirm() {
             document.getElementById('genericConfirmModal').style.display = 'none';
             pendingConfirmForm = null;
+            pendingConfirmSubmitter = null;
         }
         function confirmGenericAction() {
             document.getElementById('genericConfirmModal').style.display = 'none';
-            if (pendingConfirmForm) { pendingConfirmForm.submit(); }
+            if (pendingConfirmForm) {
+                pendingConfirmForm.dataset.confirmed = 'true';
+                if (pendingConfirmSubmitter && pendingConfirmForm.requestSubmit) {
+                    pendingConfirmForm.requestSubmit(pendingConfirmSubmitter);
+                } else {
+                    pendingConfirmForm.submit();
+                }
+            }
         }
     </script>
 

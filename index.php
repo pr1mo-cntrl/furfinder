@@ -1,14 +1,6 @@
 <?php
 include 'db.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    error_log("DEBUG POST hit: content-length=" . ($_SERVER['CONTENT_LENGTH'] ?? 'unset')
-        . " post-keys=" . implode(',', array_keys($_POST))
-        . " files-keys=" . implode(',', array_keys($_FILES))
-        . " lf_photo-error=" . ($_FILES['lf_photo']['error'] ?? 'not-set')
-        . " lf_photo-size=" . ($_FILES['lf_photo']['size'] ?? 'not-set'));
-}
-
 // If an uploaded file exceeds post_max_size, PHP silently empties $_POST and
 // $_FILES entirely - without this check, the page just reloads with no
 // feedback and it looks like the form submission vanished.
@@ -1092,10 +1084,16 @@ if ($progress_percent > 100) $progress_percent = 100;
         }
 
         let pendingConfirmForm = null;
+        let pendingConfirmSubmitter = null;
         document.querySelectorAll('form.js-confirm').forEach(function(form) {
             form.addEventListener('submit', function(e) {
+                if (form.dataset.confirmed === 'true') {
+                    form.dataset.confirmed = 'false';
+                    return;
+                }
                 e.preventDefault();
                 pendingConfirmForm = form;
+                pendingConfirmSubmitter = e.submitter;
                 document.getElementById('genericConfirmMessage').textContent = form.dataset.confirmMsg || 'Are you sure?';
                 document.getElementById('genericConfirmModal').style.display = 'flex';
             });
@@ -1103,10 +1101,18 @@ if ($progress_percent > 100) $progress_percent = 100;
         function closeGenericConfirm() {
             document.getElementById('genericConfirmModal').style.display = 'none';
             pendingConfirmForm = null;
+            pendingConfirmSubmitter = null;
         }
         function confirmGenericAction() {
             document.getElementById('genericConfirmModal').style.display = 'none';
-            if (pendingConfirmForm) { pendingConfirmForm.submit(); }
+            if (pendingConfirmForm) {
+                pendingConfirmForm.dataset.confirmed = 'true';
+                if (pendingConfirmSubmitter && pendingConfirmForm.requestSubmit) {
+                    pendingConfirmForm.requestSubmit(pendingConfirmSubmitter);
+                } else {
+                    pendingConfirmForm.submit();
+                }
+            }
         }
 
         function sharePet(name, breed) {
