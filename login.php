@@ -1,6 +1,14 @@
 <?php
 include 'db.php';
 
+$login_message = '';
+$login_type = '';
+$register_message = '';
+$register_type = '';
+$forgot_message = '';
+$forgot_type = '';
+$active_box = 'login';
+
 // HANDLE REGISTER
 if (isset($_POST['register'])) {
     $name = $_POST['name'];
@@ -15,20 +23,26 @@ if (isset($_POST['register'])) {
     $role = 'user';
     if ($email === 'admin@furfinder.com') { $role = 'admin'; }
 
+    $active_box = 'register';
+
     try {
         $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $check->execute([$email]);
 
         if ($check->fetch()) {
-            echo "<" . "script>alert('This email is already registered. Please login or use Forgot Password.');</" . "script>";
+            $register_message = 'This email is already registered. Please login or use Forgot Password.';
+            $register_type = 'error';
         } else {
             $stmt = $conn->prepare("INSERT INTO users (name, email, password, role, barangay, age_group, current_pets_status, preferred_breed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             if ($stmt->execute([$name, $email, $pass, $role, $barangay, $age_group, $current_pets, $pref_breed])) {
-                echo "<" . "script>alert('Registration Successful! Please Login.');</" . "script>";
+                $register_message = 'Registration successful! Please login.';
+                $register_type = 'success';
+                $active_box = 'login';
             }
         }
     } catch (PDOException $e) {
-        echo "<" . "script>alert('Registration Error: " . $e->getMessage() . "');</" . "script>";
+        $register_message = 'Registration error: ' . $e->getMessage();
+        $register_type = 'error';
     }
 }
 
@@ -36,6 +50,8 @@ if (isset($_POST['register'])) {
 if (isset($_POST['reset_password'])) {
     $email = strtolower(trim($_POST['reset_email']));
     $new_password = $_POST['new_password'];
+
+    $active_box = 'forgot';
 
     try {
         $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
@@ -45,12 +61,16 @@ if (isset($_POST['reset_password'])) {
             $hashed = password_hash($new_password, PASSWORD_DEFAULT);
             $update = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
             $update->execute([$hashed, $email]);
-            echo "<" . "script>alert('Password reset successful! Please login with your new password.');</" . "script>";
+            $forgot_message = 'Password reset successful! Please login with your new password.';
+            $forgot_type = 'success';
+            $active_box = 'login';
         } else {
-            echo "<" . "script>alert('No account found with that email.');</" . "script>";
+            $forgot_message = 'No account found with that email.';
+            $forgot_type = 'error';
         }
     } catch (PDOException $e) {
-        echo "<" . "script>alert('Database Error: " . $e->getMessage() . "');</" . "script>";
+        $forgot_message = 'Database error: ' . $e->getMessage();
+        $forgot_type = 'error';
     }
 }
 
@@ -58,6 +78,8 @@ if (isset($_POST['reset_password'])) {
 if (isset($_POST['login'])) {
     $email = strtolower(trim($_POST['email']));
     $password = $_POST['password'];
+
+    $active_box = 'login';
 
     try {
         $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
@@ -79,13 +101,16 @@ if (isset($_POST['login'])) {
                     exit();
                 }
             } else {
-                echo "<" . "script>alert('Invalid Password');</" . "script>";
+                $login_message = 'Invalid password.';
+                $login_type = 'error';
             }
         } else {
-            echo "<" . "script>alert('User not found');</" . "script>";
+            $login_message = 'User not found.';
+            $login_type = 'error';
         }
     } catch (PDOException $e) {
-        echo "<" . "script>alert('Database Error: " . $e->getMessage() . "');</" . "script>";
+        $login_message = 'Database error: ' . $e->getMessage();
+        $login_type = 'error';
     }
 }
 ?>
@@ -102,11 +127,17 @@ if (isset($_POST['login'])) {
         button:hover { background: #d4af37; color: #003366; }
         .toggle { margin-top: 15px; font-size: 0.9rem; color: #003366; cursor: pointer; text-decoration: underline; }
         .section-label { text-align: left; font-size: 0.85rem; color: #666; font-weight: bold; margin-top: 10px; margin-bottom: -5px; }
+        .message { padding: 10px; border-radius: 4px; margin-bottom: 10px; font-size: 0.9rem; text-align: left; }
+        .message.error { background: #fdecea; color: #b3261e; border: 1px solid #f5c6c2; }
+        .message.success { background: #eaf7ed; color: #1e7b34; border: 1px solid #c3e6cb; }
     </style>
 </head>
 <body>
-    <div class="container" id="login-box">
+    <div class="container" id="login-box" style="display:<?php echo $active_box === 'login' ? 'block' : 'none'; ?>;">
         <h2>Login</h2>
+        <?php if ($login_message): ?>
+            <div class="message <?php echo $login_type; ?>"><?php echo htmlspecialchars($login_message); ?></div>
+        <?php endif; ?>
         <form method="POST">
             <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
@@ -116,9 +147,12 @@ if (isset($_POST['login'])) {
         <p class="toggle" onclick="showForgot()">Forgot Password?</p>
     </div>
 
-    <div class="container" id="forgot-box" style="display:none;">
+    <div class="container" id="forgot-box" style="display:<?php echo $active_box === 'forgot' ? 'block' : 'none'; ?>;">
         <h2 style="margin-bottom: 5px;">Forgot Password</h2>
         <p style="font-size: 0.85rem; color: #666; margin-bottom: 20px;">Enter your email and a new password.</p>
+        <?php if ($forgot_message): ?>
+            <div class="message <?php echo $forgot_type; ?>"><?php echo htmlspecialchars($forgot_message); ?></div>
+        <?php endif; ?>
         <form method="POST">
             <input type="email" name="reset_email" placeholder="Email Address" required>
             <input type="password" name="new_password" placeholder="New Password" required>
@@ -127,10 +161,13 @@ if (isset($_POST['login'])) {
         <p class="toggle" onclick="showLogin()">Back to Login</p>
     </div>
 
-    <div class="container" id="register-box" style="display:none;">
+    <div class="container" id="register-box" style="display:<?php echo $active_box === 'register' ? 'block' : 'none'; ?>;">
         <h2 style="margin-bottom: 5px;">Register</h2>
         <p style="font-size: 0.85rem; color: #666; margin-bottom: 20px;">Help us get to know you better!</p>
-        
+        <?php if ($register_message): ?>
+            <div class="message <?php echo $register_type; ?>"><?php echo htmlspecialchars($register_message); ?></div>
+        <?php endif; ?>
+
         <form method="POST">
             <input type="text" name="name" placeholder="Full Name" required>
             <input type="email" name="email" placeholder="Email Address" required>
