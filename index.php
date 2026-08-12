@@ -10,6 +10,66 @@ if (isset($_POST['submit_application'])) { $activeTab = 'adopt'; }
 if (isset($_POST['submit_donation'])) { $activeTab = 'donate'; }
 if (isset($_GET['search']) || isset($_GET['type_filter'])) { $activeTab = 'adopt'; }
 
+// --- APPLICATION STATUS NOTIFICATIONS ---
+if (isset($_POST['dismiss_notification'])) {
+    $app_id_to_dismiss = $_POST['app_id'];
+
+    $result = $conn->query("SELECT status FROM applications WHERE id = '$app_id_to_dismiss'");
+    if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
+        $new_status = $row['status'] . '_Seen';
+        $conn->query("UPDATE applications SET status = '$new_status' WHERE id = '$app_id_to_dismiss'");
+    }
+
+    header("Location: index.php");
+    exit();
+}
+
+$notifications_html = '';
+$notification_count = 0;
+
+if (isset($_SESSION['user_id'])) {
+    $current_user_id = $_SESSION['user_id'];
+
+    $check_status = $conn->query("SELECT * FROM applications WHERE user_id = '$current_user_id' AND status IN ('Pending', 'Approved', 'Rejected')");
+
+    if ($check_status && $check_status->rowCount() > 0) {
+        while ($app = $check_status->fetch(PDO::FETCH_ASSOC)) {
+            $app_id = $app['id'];
+            $status = $app['status'];
+            $notification_count++;
+
+            if ($status == 'Pending') {
+                $notifications_html .= '
+                <div class="notif-item notif-pending">
+                    <strong>⏳ Application Pending:</strong> Your adoption application is currently under review by the CVAO team. We will update you here as soon as a decision is made!
+                </div>';
+            }
+            elseif ($status == 'Approved') {
+                $notifications_html .= '
+                <div class="notif-item notif-approved">
+                    <h4 style="margin-top: 0;">🎉 Application Approved!</h4>
+                    <p style="margin-bottom: 10px;">Your adoption application has been reviewed and approved. Please proceed to the Baguio City Veterinary and Agriculture Office (CVAO) for your physical screening and interview.</p>
+                    <form method="POST">
+                        <input type="hidden" name="app_id" value="' . $app_id . '">
+                        <button type="submit" name="dismiss_notification" class="notif-dismiss-btn notif-dismiss-approved">Okay, got it!</button>
+                    </form>
+                </div>';
+            }
+            elseif ($status == 'Rejected') {
+                $notifications_html .= '
+                <div class="notif-item notif-rejected">
+                    <h4 style="margin-top: 0;">❌ Application Update</h4>
+                    <p style="margin-bottom: 10px;">We regret to inform you that your recent adoption application was not approved by the CVAO at this time. Thank you for your interest in providing a home for our shelter pets.</p>
+                    <form method="POST">
+                        <input type="hidden" name="app_id" value="' . $app_id . '">
+                        <button type="submit" name="dismiss_notification" class="notif-dismiss-btn notif-dismiss-rejected">Dismiss</button>
+                    </form>
+                </div>';
+            }
+        }
+    }
+}
+
 // --- HANDLE USER MARKING PET AS FOUND ---
 if (isset($_POST['mark_as_found'])) {
     $report_id = $_POST['report_id'];
@@ -203,6 +263,24 @@ if ($progress_percent > 100) $progress_percent = 100;
         .nav-links a { color: white; text-decoration: none; font-weight: 600; padding: 8px 12px; border-radius: 4px; transition: var(--transition); cursor: pointer; }
         .nav-links a:hover, .nav-links a.active { background-color: rgba(255,255,255,0.15); color: var(--accent-color); }
         .auth-btn { background: var(--accent-color); color: var(--primary-color) !important; padding: 8px 20px !important; border-radius: 20px; text-align: center; }
+
+        .notif-bell-wrap { position: relative; }
+        .notif-bell { position: relative; color: white; font-size: 1.2rem; cursor: pointer; padding: 8px 12px; border-radius: 4px; display: inline-block; }
+        .notif-bell:hover { background-color: rgba(255,255,255,0.15); }
+        .notif-badge { position: absolute; top: 2px; right: 4px; background: #dc3545; color: white; font-size: 0.65rem; font-weight: bold; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+        .notif-dropdown { display: none; position: absolute; top: 110%; right: 0; background: white; color: #333; width: 320px; max-width: 90vw; max-height: 400px; overflow-y: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 3000; text-align: left; }
+        .notif-dropdown.open { display: block; }
+        .notif-dropdown-header { padding: 12px 15px; font-weight: bold; border-bottom: 1px solid #eee; background: #f8f9fa; border-radius: 8px 8px 0 0; }
+        .notif-empty { padding: 20px 15px; color: #888; text-align: center; font-size: 0.9rem; }
+        .notif-item { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-item form { margin-top: 8px; }
+        .notif-pending { background: #fff3cd; color: #856404; }
+        .notif-approved { background: #d4edda; color: #155724; }
+        .notif-rejected { background: #f8d7da; color: #721c24; }
+        .notif-dismiss-btn { border: none; padding: 6px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
+        .notif-dismiss-approved { background-color: #28a745; color: white; }
+        .notif-dismiss-rejected { background-color: #dc3545; color: white; }
         
         .menu-toggle { display: none; font-size: 1.8rem; cursor: pointer; color: white; }
 
@@ -322,7 +400,24 @@ if ($progress_percent > 100) $progress_percent = 100;
             <?php if(isset($_SESSION['user_id'])): ?>
                 <li><a onclick="showPage('adopt')" id="nav-adopt">Adopt</a></li>
                 <li><a onclick="showPage('lost')" id="nav-lost">Lost & Found</a></li>
-                
+
+                <li class="notif-bell-wrap">
+                    <span class="notif-bell" onclick="toggleNotifDropdown(event)">
+                        <i class="fas fa-bell"></i>
+                        <?php if ($notification_count > 0): ?>
+                            <span class="notif-badge"><?php echo $notification_count; ?></span>
+                        <?php endif; ?>
+                    </span>
+                    <div class="notif-dropdown" id="notif-dropdown">
+                        <div class="notif-dropdown-header">Notifications</div>
+                        <?php if ($notification_count > 0): ?>
+                            <?php echo $notifications_html; ?>
+                        <?php else: ?>
+                            <div class="notif-empty">You're all caught up — no notifications.</div>
+                        <?php endif; ?>
+                    </div>
+                </li>
+
                 <li style="color:var(--accent-color); margin:10px 0;">Hi, <?php echo htmlspecialchars(isset($_SESSION['name']) ? $_SESSION['name'] : 'User'); ?></li>
                 <li><a href="logout.php" class="auth-btn">Logout</a></li>
             <?php else: ?>
@@ -349,63 +444,7 @@ if ($progress_percent > 100) $progress_percent = 100;
             }
         }, 5000);
     </script>
-    <?php unset($_SESSION['flash_msg']); endif; ?> 
-
-    <?php
-if (isset($_POST['dismiss_notification'])) {
-    $app_id_to_dismiss = $_POST['app_id'];
-    
-    $result = $conn->query("SELECT status FROM applications WHERE id = '$app_id_to_dismiss'");
-    if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
-        $new_status = $row['status'] . '_Seen';
-        $conn->query("UPDATE applications SET status = '$new_status' WHERE id = '$app_id_to_dismiss'");
-    }
-    
-    echo "<script>window.location.href='index.php';</script>";
-}
-
-if (isset($_SESSION['user_id'])) {
-    $current_user_id = $_SESSION['user_id']; 
-    
-    $check_status = $conn->query("SELECT * FROM applications WHERE user_id = '$current_user_id' AND status IN ('Pending', 'Approved', 'Rejected')");
-
-    if ($check_status && $check_status->rowCount() > 0) {
-        while ($app = $check_status->fetch(PDO::FETCH_ASSOC)) {
-            $app_id = $app['id'];
-            $status = $app['status'];
-
-            if ($status == 'Pending') {
-                echo '
-                <div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 20px; width: 90%; margin-left: auto; margin-right: auto; text-align: center; font-family: sans-serif;">
-                    <strong>⏳ Application Pending:</strong> Your adoption application is currently under review by the CVAO team. We will update you here as soon as a decision is made!
-                </div>';
-            } 
-            elseif ($status == 'Approved') {
-                echo '
-                <div style="background-color: #d4edda; color: #155724; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb; margin-bottom: 20px; width: 90%; margin-left: auto; margin-right: auto; text-align: center; font-family: sans-serif;">
-                    <h3 style="margin-top: 0;">🎉 Application Approved!</h3>
-                    <p style="margin-bottom: 15px;">Your adoption application has been reviewed and approved. Please proceed to the Baguio City Veterinary and Agriculture Office (CVAO) for your physical screening and interview.</p>
-                    <form method="POST">
-                        <input type="hidden" name="app_id" value="' . $app_id . '">
-                        <button type="submit" name="dismiss_notification" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold;">Okay, got it!</button>
-                    </form>
-                </div>';
-            }
-            elseif ($status == 'Rejected') {
-                echo '
-                <div style="background-color: #f8d7da; color: #721c24; padding: 20px; border-radius: 8px; border: 1px solid #f5c6cb; margin-bottom: 20px; width: 90%; margin-left: auto; margin-right: auto; text-align: center; font-family: sans-serif;">
-                    <h3 style="margin-top: 0;">❌ Application Update</h3>
-                    <p style="margin-bottom: 15px;">We regret to inform you that your recent adoption application was not approved by the CVAO at this time. Thank you for your interest in providing a home for our shelter pets.</p>
-                    <form method="POST">
-                        <input type="hidden" name="app_id" value="' . $app_id . '">
-                        <button type="submit" name="dismiss_notification" style="background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold;">Dismiss</button>
-                    </form>
-                </div>';
-            }
-        }
-    }
-}
-?>
+    <?php unset($_SESSION['flash_msg']); endif; ?>
 
 <section id="home" class="container active">
         <div class="hero">
@@ -904,6 +943,17 @@ if (isset($_SESSION['user_id'])) {
         function toggleMobileNav() {
             document.getElementById('nav-links').classList.toggle('active-nav');
         }
+
+        function toggleNotifDropdown(event) {
+            event.stopPropagation();
+            document.getElementById('notif-dropdown').classList.toggle('open');
+        }
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('notif-dropdown');
+            if (dropdown && dropdown.classList.contains('open') && !dropdown.contains(event.target) && !event.target.closest('.notif-bell')) {
+                dropdown.classList.remove('open');
+            }
+        });
 
         function toggleFaq(element) {
             element.classList.toggle('open');
