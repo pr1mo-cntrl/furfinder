@@ -11,6 +11,16 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
+// If an uploaded file exceeds post_max_size, PHP silently empties $_POST and
+// $_FILES entirely - without this check the page just reloads with no
+// feedback and it looks like the form submission vanished.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+    $_SESSION['admin_flash'] = "Your upload was too large for the server to accept. Please use a smaller photo (under 12MB) and try again.";
+    $_SESSION['admin_flash_type'] = 'error';
+    header("Location: admin.php");
+    exit();
+}
+
 // --- PHP HANDLERS ---
 
 // 1. Handle New Pet (Supabase Cloud Storage & PRG Redirect Fix)
@@ -70,6 +80,15 @@ if (isset($_POST['add_pet'])) {
             header("Location: admin.php");
             exit();
         }
+    } else {
+        $upload_error = isset($_FILES["pet_photo"]) ? $_FILES["pet_photo"]["error"] : UPLOAD_ERR_NO_FILE;
+        error_log("Add pet blocked, photo upload error code: $upload_error");
+        $_SESSION['admin_flash'] = ($upload_error == UPLOAD_ERR_INI_SIZE || $upload_error == UPLOAD_ERR_FORM_SIZE)
+            ? "That photo is too large. Please use an image under 12MB."
+            : "We couldn't read the pet photo upload. Please choose the photo again and resubmit.";
+        $_SESSION['admin_flash_type'] = 'error';
+        header("Location: admin.php");
+        exit();
     }
 }
 

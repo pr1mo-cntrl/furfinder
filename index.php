@@ -1,6 +1,15 @@
 <?php
 include 'db.php';
 
+// If an uploaded file exceeds post_max_size, PHP silently empties $_POST and
+// $_FILES entirely - without this check, the page just reloads with no
+// feedback and it looks like the form submission vanished.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+    $_SESSION['flash_error'] = "Your upload was too large for the server to accept. Please use a smaller photo (under 12MB) and try again.";
+    header("Location: index.php");
+    exit();
+}
+
 // --- TAB LOGIC ---
 $activeTab = 'home'; 
 // Allow the URL to set the active tab after a redirect
@@ -150,6 +159,14 @@ if (isset($_POST['submit_lost_report'])) {
             header("Location: index.php?tab=lost");
             exit();
         }
+    } else {
+        $upload_error = isset($_FILES["lf_photo"]) ? $_FILES["lf_photo"]["error"] : UPLOAD_ERR_NO_FILE;
+        error_log("Lost pet report blocked, photo upload error code: $upload_error");
+        $_SESSION['flash_error'] = ($upload_error == UPLOAD_ERR_INI_SIZE || $upload_error == UPLOAD_ERR_FORM_SIZE)
+            ? "That photo is too large. Please use an image under 12MB."
+            : "We couldn't read your photo upload. Please choose the photo again and resubmit.";
+        header("Location: index.php?tab=lost");
+        exit();
     }
 }
 
