@@ -14,12 +14,12 @@ if (isset($_POST['register'])) {
     $name = $_POST['name'];
     $email = strtolower(trim($_POST['email']));
     $pass = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    
+
     $barangay = $_POST['barangay'];
     $age_group = $_POST['age_group'];
     $current_pets = $_POST['current_pets_status'];
     $pref_breed = $_POST['preferred_breed'];
-    
+
     $role = 'user';
     if ($email === 'admin@furfinder.com') { $role = 'admin'; }
 
@@ -93,6 +93,11 @@ if (isset($_POST['login'])) {
                 $_SESSION['name'] = $row['name'];
                 $_SESSION['role'] = $row['role'];
 
+                if (isset($_POST['remember'])) {
+                    // Extend the session cookie's lifetime in the browser to 30 days.
+                    setcookie(session_name(), session_id(), time() + 30 * 24 * 60 * 60, "/");
+                }
+
                 if ($row['role'] == 'admin') {
                     header("Location: admin.php");
                     exit();
@@ -121,6 +126,7 @@ if (isset($_POST['login'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | FurFinder</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #003366;
@@ -131,34 +137,36 @@ if (isset($_POST['login'])) {
         * { box-sizing: border-box; }
         body {
             font-family: 'Open Sans', 'Segoe UI', sans-serif;
-            background: #f4f7f6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             margin: 0;
-            padding: 24px;
             color: #333;
-        }
-        .container {
             background: white;
-            padding: 2.25rem 2rem;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
         }
-        .container h2 { color: var(--primary-color); font-size: 1.4rem; letter-spacing: -0.01em; }
-        label, .section-label { text-align: left; font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; margin-top: 12px; margin-bottom: -2px; display: block; }
-        input, select {
+
+        .auth-shell { display: flex; min-height: 100vh; }
+
+        /* LEFT: form panel */
+        .auth-left {
+            flex: 1 1 480px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px clamp(24px, 6vw, 80px);
+        }
+        .brand { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 700; color: var(--primary-color); margin-bottom: 48px; letter-spacing: -0.01em; }
+        .brand i { color: var(--accent-color); }
+
+        .auth-card { width: 100%; max-width: 400px; }
+        .auth-card h1 { font-size: 1.9rem; margin: 0 0 6px; color: #111; letter-spacing: -0.02em; }
+        .auth-card .auth-sub { color: #767e89; font-size: 0.95rem; margin: 0 0 28px; }
+
+        label { display: block; font-size: 0.85rem; font-weight: 600; color: #333; margin-bottom: 6px; }
+        .section-label { text-align: left; font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; margin-top: 16px; margin-bottom: 4px; }
+        input[type="email"], input[type="password"], input[type="text"], select {
             width: 100%;
-            padding: 10px 12px;
-            margin: 8px 0;
+            padding: 11px 14px;
+            margin-bottom: 18px;
             border: 1px solid var(--border-color);
             border-radius: var(--radius);
-            box-sizing: border-box;
             font-family: inherit;
             font-size: 0.95rem;
             transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -168,9 +176,14 @@ if (isset($_POST['login'])) {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(0,51,102,0.1);
         }
+
+        .auth-row { display: flex; align-items: center; justify-content: space-between; margin: -8px 0 22px; font-size: 0.88rem; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; font-weight: 400; color: #444; margin: 0; cursor: pointer; }
+        .checkbox-label input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary-color); cursor: pointer; }
+
         button {
             width: 100%;
-            padding: 12px;
+            padding: 13px;
             background: var(--primary-color);
             color: white;
             border: none;
@@ -178,83 +191,175 @@ if (isset($_POST['login'])) {
             border-radius: var(--radius);
             font-weight: 600;
             font-size: 0.95rem;
-            margin-top: 14px;
             transition: background-color 0.15s ease;
         }
         button:hover { background: var(--accent-color); color: var(--primary-color); }
-        .toggle { margin-top: 18px; font-size: 0.85rem; color: var(--primary-color); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+        .toggle { color: var(--primary-color); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
         .toggle:hover { color: var(--accent-color); }
-        .message { padding: 10px 12px; border-radius: var(--radius); margin-bottom: 12px; font-size: 0.85rem; text-align: left; }
+        .switch-line { text-align: center; margin-top: 24px; font-size: 0.9rem; color: #666; }
+
+        .message { padding: 10px 12px; border-radius: var(--radius); margin-bottom: 16px; font-size: 0.85rem; text-align: left; }
         .message.error { background: #fdecea; color: #b3261e; border: 1px solid #f5c6c2; }
         .message.success { background: #eaf7ed; color: #1e7b34; border: 1px solid #c3e6cb; }
 
-        @media (max-width: 480px) {
-            body { padding: 16px; align-items: flex-start; padding-top: 40px; }
-            .container { padding: 1.75rem 1.25rem; }
+        /* RIGHT: brand panel */
+        .auth-right {
+            flex: 1 1 480px;
+            position: relative;
+            background: var(--primary-color);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        .auth-right-inner { position: relative; z-index: 2; max-width: 380px; text-align: center; color: white; }
+        .paw-badge {
+            width: 96px; height: 96px; border-radius: 50%;
+            background: var(--accent-color); color: var(--primary-color);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.4rem; margin: 0 auto 28px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+        .auth-right-inner h2 { font-size: 1.6rem; margin: 0 0 12px; letter-spacing: -0.01em; }
+        .auth-right-inner p { color: rgba(255,255,255,0.8); font-size: 0.95rem; line-height: 1.6; margin: 0 0 32px; }
+
+        .feature-chips { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .chip {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.18);
+            padding: 9px 16px; border-radius: 30px;
+            font-size: 0.85rem; font-weight: 600;
+        }
+        .chip i { color: var(--accent-color); }
+
+        /* Decorative scattered paw prints, like the reference illustration */
+        .deco-icon { position: absolute; color: rgba(255,255,255,0.12); z-index: 1; }
+        .deco-icon.lg { font-size: 3.5rem; }
+        .deco-icon.md { font-size: 2.2rem; }
+        .deco-icon.sm { font-size: 1.4rem; }
+        .d1 { top: 8%; left: 10%; }
+        .d2 { top: 15%; right: 12%; }
+        .d3 { bottom: 12%; left: 8%; }
+        .d4 { bottom: 18%; right: 8%; }
+        .d5 { top: 45%; left: 4%; }
+        .d6 { top: 40%; right: 5%; }
+        .d7 { bottom: 40%; left: 45%; }
+
+        @media (max-width: 900px) {
+            .auth-right { display: none; }
+            .auth-left { padding: 32px 24px; }
+        }
+        @media (max-width: 420px) {
+            .brand { margin-bottom: 32px; }
+            .auth-card h1 { font-size: 1.6rem; }
         }
     </style>
 </head>
 <body>
-    <div class="container" id="login-box" style="display:<?php echo $active_box === 'login' ? 'block' : 'none'; ?>;">
-        <h2>Login</h2>
-        <?php if ($login_message): ?>
-            <div class="message <?php echo $login_type; ?>"><?php echo htmlspecialchars($login_message); ?></div>
-        <?php endif; ?>
-        <form method="POST">
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit" name="login">Login</button>
-        </form>
-        <p class="toggle" onclick="toggleForm()">No account? Register here.</p>
-        <p class="toggle" onclick="showForgot()">Forgot Password?</p>
-    </div>
+    <div class="auth-shell">
+        <div class="auth-left">
+            <div class="brand"><i class="fas fa-paw"></i> FurFinder</div>
 
-    <div class="container" id="forgot-box" style="display:<?php echo $active_box === 'forgot' ? 'block' : 'none'; ?>;">
-        <h2 style="margin-bottom: 5px;">Forgot Password</h2>
-        <p style="font-size: 0.85rem; color: #666; margin-bottom: 20px;">Enter your email and a new password.</p>
-        <?php if ($forgot_message): ?>
-            <div class="message <?php echo $forgot_type; ?>"><?php echo htmlspecialchars($forgot_message); ?></div>
-        <?php endif; ?>
-        <form method="POST">
-            <input type="email" name="reset_email" placeholder="Email Address" required>
-            <input type="password" name="new_password" placeholder="New Password" required>
-            <button type="submit" name="reset_password">Reset Password</button>
-        </form>
-        <p class="toggle" onclick="showLogin()">Back to Login</p>
-    </div>
+            <div class="auth-card" id="login-box" style="display:<?php echo $active_box === 'login' ? 'block' : 'none'; ?>;">
+                <h1>Welcome back</h1>
+                <p class="auth-sub">Sign in to help pets find their way home.</p>
+                <?php if ($login_message): ?>
+                    <div class="message <?php echo $login_type; ?>"><?php echo htmlspecialchars($login_message); ?></div>
+                <?php endif; ?>
+                <form method="POST">
+                    <label>Email address</label>
+                    <input type="email" name="email" required>
+                    <label>Password</label>
+                    <input type="password" name="password" required>
+                    <div class="auth-row">
+                        <label class="checkbox-label"><input type="checkbox" name="remember"> Remember me for 30 days</label>
+                        <span class="toggle" onclick="showForgot()">Forgot password?</span>
+                    </div>
+                    <button type="submit" name="login">Sign in</button>
+                </form>
+                <p class="switch-line">Don't have an account? <span class="toggle" onclick="toggleForm()">Sign up</span></p>
+            </div>
 
-    <div class="container" id="register-box" style="display:<?php echo $active_box === 'register' ? 'block' : 'none'; ?>;">
-        <h2 style="margin-bottom: 5px;">Register</h2>
-        <p style="font-size: 0.85rem; color: #666; margin-bottom: 20px;">Help us get to know you better!</p>
-        <?php if ($register_message): ?>
-            <div class="message <?php echo $register_type; ?>"><?php echo htmlspecialchars($register_message); ?></div>
-        <?php endif; ?>
+            <div class="auth-card" id="forgot-box" style="display:<?php echo $active_box === 'forgot' ? 'block' : 'none'; ?>;">
+                <h1>Forgot password</h1>
+                <p class="auth-sub">Enter your email and choose a new password.</p>
+                <?php if ($forgot_message): ?>
+                    <div class="message <?php echo $forgot_type; ?>"><?php echo htmlspecialchars($forgot_message); ?></div>
+                <?php endif; ?>
+                <form method="POST">
+                    <label>Email address</label>
+                    <input type="email" name="reset_email" required>
+                    <label>New password</label>
+                    <input type="password" name="new_password" required>
+                    <button type="submit" name="reset_password">Reset password</button>
+                </form>
+                <p class="switch-line"><span class="toggle" onclick="showLogin()">Back to login</span></p>
+            </div>
 
-        <form method="POST">
-            <input type="text" name="name" placeholder="Full Name" required>
-            <input type="email" name="email" placeholder="Email Address" required>
-            
-            <p class="section-label">Adopter Profile</p>
-            <input type="text" name="barangay" placeholder="Barangay (e.g., Camp 7)" required>
-            
-            <select name="age_group" required>
-                <option value="" disabled selected>Select Age Group</option>
-                <option value="18-24">18-24 years old</option>
-                <option value="25-34">25-34 years old</option>
-                <option value="35-44">35-44 years old</option>
-                <option value="45-54">45-54 years old</option>
-                <option value="55+">55+ years old</option>
-            </select>
+            <div class="auth-card" id="register-box" style="display:<?php echo $active_box === 'register' ? 'block' : 'none'; ?>;">
+                <h1>Create an account</h1>
+                <p class="auth-sub">Help us get to know you better.</p>
+                <?php if ($register_message): ?>
+                    <div class="message <?php echo $register_type; ?>"><?php echo htmlspecialchars($register_message); ?></div>
+                <?php endif; ?>
+                <form method="POST">
+                    <label>Full name</label>
+                    <input type="text" name="name" required>
+                    <label>Email address</label>
+                    <input type="email" name="email" required>
 
-            <input type="text" name="current_pets_status" placeholder="Current Pets (e.g., 1 Dog, None)" required>
-            <input type="text" name="preferred_breed" placeholder="Preferred Breed (Optional)">
-            
-            <p class="section-label">Security</p>
-            <input type="password" name="password" placeholder="Create Password" required>
-            
-            <button type="submit" name="register">Sign Up</button>
-        </form>
-        <p class="toggle" onclick="toggleForm()">Have an account? Login here.</p>
+                    <p class="section-label">Adopter Profile</p>
+                    <label>Barangay</label>
+                    <input type="text" name="barangay" placeholder="e.g., Camp 7" required>
+
+                    <label>Age group</label>
+                    <select name="age_group" required>
+                        <option value="" disabled selected>Select age group</option>
+                        <option value="18-24">18-24 years old</option>
+                        <option value="25-34">25-34 years old</option>
+                        <option value="35-44">35-44 years old</option>
+                        <option value="45-54">45-54 years old</option>
+                        <option value="55+">55+ years old</option>
+                    </select>
+
+                    <label>Current pets</label>
+                    <input type="text" name="current_pets_status" placeholder="e.g., 1 Dog, None" required>
+                    <label>Preferred breed (optional)</label>
+                    <input type="text" name="preferred_breed">
+
+                    <p class="section-label">Security</p>
+                    <label>Create password</label>
+                    <input type="password" name="password" required>
+
+                    <button type="submit" name="register">Sign up</button>
+                </form>
+                <p class="switch-line">Have an account? <span class="toggle" onclick="toggleForm()">Login here</span></p>
+            </div>
+        </div>
+
+        <div class="auth-right">
+            <i class="fas fa-paw deco-icon lg d1"></i>
+            <i class="fas fa-bone deco-icon md d2"></i>
+            <i class="fas fa-paw deco-icon sm d3"></i>
+            <i class="fas fa-heart deco-icon md d4"></i>
+            <i class="fas fa-paw deco-icon md d5"></i>
+            <i class="fas fa-house deco-icon sm d6"></i>
+            <i class="fas fa-paw deco-icon sm d7"></i>
+
+            <div class="auth-right-inner">
+                <div class="paw-badge"><i class="fas fa-paw"></i></div>
+                <h2>Every pet deserves a loving home</h2>
+                <p>FurFinder connects Baguio's stray and shelter animals with adopters, and helps reunite lost pets with their families.</p>
+                <div class="feature-chips">
+                    <div class="chip"><i class="fas fa-heart"></i> Adopt</div>
+                    <div class="chip"><i class="fas fa-map-marker-alt"></i> Lost &amp; Found</div>
+                    <div class="chip"><i class="fas fa-hand-holding-heart"></i> Donate</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
