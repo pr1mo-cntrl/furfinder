@@ -94,10 +94,12 @@ if (isset($_POST['update_shelter'])) {
 // 4. Handle Application Status Update (Removed duplicate block from top of file)
 if (isset($_POST['update_application'])) {
     $id = $_POST['app_id'];
-    $status = $_POST['status'];
+    $status = $_POST['update_application'];
     $stmt = $conn->prepare("UPDATE applications SET status = ? WHERE id = ?");
     $stmt->execute([$status, $id]);
-    echo "<script>alert('Application status updated!'); window.location.href='admin.php';</script>";
+    $_SESSION['admin_flash'] = 'Application status updated to ' . $status . '.';
+    header("Location: admin.php");
+    exit();
 }
 
 // 5. Handle Lost Pet Status Update (Mark Found)
@@ -284,7 +286,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         .btn-add { background: var(--success); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
         .btn-delete { background: var(--danger); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
         .btn-save { background: var(--primary-color); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
-        
+
+        .status-btn { border: 1px solid #ccc; background: #f1f1f1; color: #555; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.15s ease; }
+        .status-btn:hover { opacity: 0.85; }
+        .status-btn-pending.active { background: #fff3cd; color: #856404; border-color: #ffeeba; }
+        .status-btn-approved.active { background: var(--success); color: white; border-color: var(--success); }
+        .status-btn-rejected.active { background: var(--danger); color: white; border-color: var(--danger); }
+
         .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         .data-table th, .data-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle; }
         .data-table th { background-color: var(--primary-color); color: var(--white); font-weight: 600; text-transform: uppercase; }
@@ -340,6 +348,20 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
     </style>
 </head>
 <body>
+
+    <?php if(isset($_SESSION['admin_flash'])): ?>
+    <div id="admin-flash-banner" style="position: fixed; top: 20px; right: 20px; z-index: 9999; background: var(--success); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 15px; transition: opacity 0.5s ease;">
+        <i class="fas fa-check-circle" style="font-size: 1.3rem;"></i>
+        <span><?php echo htmlspecialchars($_SESSION['admin_flash']); ?></span>
+        <button onclick="this.parentElement.style.opacity='0'; setTimeout(()=>this.parentElement.style.display='none', 500);" style="background: none; border: none; color: white; font-size: 1.3rem; cursor: pointer;">&times;</button>
+    </div>
+    <script>
+        setTimeout(() => {
+            const banner = document.getElementById('admin-flash-banner');
+            if(banner) { banner.style.opacity = '0'; setTimeout(() => banner.style.display = 'none', 500); }
+        }, 4000);
+    </script>
+    <?php unset($_SESSION['admin_flash']); endif; ?>
 
     <div class="sidebar">
         <h2>Admin Panel</h2>
@@ -724,14 +746,11 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <form method="POST" class="app-status">
+                                <form method="POST" class="app-status" style="display:flex; gap:5px; flex-wrap:wrap;">
                                     <input type="hidden" name="app_id" value="<?php echo $row['id']; ?>">
-                                    <select name="status">
-                                        <option value="Pending" <?php if(strpos($row['status'], 'Pending') !== false) echo 'selected'; ?>>Pending</option>
-                                        <option value="Approved" <?php if(strpos($row['status'], 'Approved') !== false) echo 'selected'; ?>>Approved</option>
-                                        <option value="Rejected" <?php if(strpos($row['status'], 'Rejected') !== false || $row['status'] == 'Acknowledged') echo 'selected'; ?>>Rejected</option>
-                                    </select>
-                                    <button type="submit" name="update_application" class="btn-save">Update</button>
+                                    <button type="submit" name="update_application" value="Pending" class="status-btn status-btn-pending<?php echo strpos($row['status'], 'Pending') !== false ? ' active' : ''; ?>">Pending</button>
+                                    <button type="submit" name="update_application" value="Approved" class="status-btn status-btn-approved<?php echo strpos($row['status'], 'Approved') !== false ? ' active' : ''; ?>">Approved</button>
+                                    <button type="submit" name="update_application" value="Rejected" class="status-btn status-btn-rejected<?php echo (strpos($row['status'], 'Rejected') !== false || $row['status'] == 'Acknowledged') ? ' active' : ''; ?>">Rejected</button>
                                 </form>
                             </td>
                             <td>
