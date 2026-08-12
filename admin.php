@@ -232,12 +232,6 @@ if ($breed_res) {
 $app_pending = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived=0")->fetchColumn() ?: 0;
 $app_approved = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Approved%' AND is_archived=0")->fetchColumn() ?: 0;
 $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LIKE 'Rejected%' OR status='Acknowledged') AND is_archived=0")->fetchColumn() ?: 0;
-
-$adopted_count = $conn->query("SELECT COUNT(*) FROM pets WHERE status='adopted'")->fetchColumn() ?: 0;
-$available_count = $dog_count + $cat_count;
-$app_decided = $app_approved + $app_rejected;
-$approval_rate = $app_decided > 0 ? round(($app_approved / $app_decided) * 100) : 0;
-$active_lost_count = $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='Missing' AND is_archived=0")->fetchColumn() ?: 0;
 ?>
 
 <!DOCTYPE html>
@@ -335,13 +329,6 @@ $active_lost_count = $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='
         }
         .card h3 { margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: #767e89; }
         .card p { font-size: 2.1rem; font-weight: 700; margin: 0; color: var(--primary-color); }
-        .card-caption { display: block; margin-top: 6px; font-size: 0.78rem; color: #8a919b; }
-
-        .dash-chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 16px; }
-        .dash-chart-card { background: white; padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
-        .dash-chart-card h4 { margin: 0 0 16px; font-size: 0.95rem; font-weight: 700; color: #333; }
-        .dash-chart-canvas-wrap { position: relative; }
-        .dash-chart-wide { margin-top: 0; }
 
         .form-row { display: flex; gap: 12px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
         .form-row input, .form-row select { padding: 9px 12px; border: 1px solid var(--border-color); border-radius: var(--radius); flex: 1; font-size: 0.9rem; }
@@ -766,55 +753,27 @@ $active_lost_count = $conn->query("SELECT COUNT(*) FROM lost_pets WHERE status='
         <div id="analytics" class="section">
             <h3><i class="fas fa-chart-bar"></i> Descriptive Analytics</h3>
             <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">An overview of current shelter statistics and adoption pipelines.</p>
-
-            <div class="dashboard-stats">
-                <div class="card">
-                    <h3>Available Pets</h3>
-                    <p><?php echo $available_count; ?></p>
-                    <small class="card-caption"><?php echo $dog_count; ?> dogs &middot; <?php echo $cat_count; ?> cats</small>
-                </div>
-                <div class="card">
-                    <h3>Pending Applications</h3>
-                    <p><?php echo $app_pending; ?></p>
-                    <small class="card-caption">Awaiting review</small>
-                </div>
-                <div class="card">
-                    <h3>Approval Rate</h3>
-                    <p><?php echo $approval_rate; ?>%</p>
-                    <small class="card-caption"><?php echo $app_approved; ?> approved of <?php echo $app_decided; ?> decided</small>
-                </div>
-                <div class="card">
-                    <h3>Pets Adopted</h3>
-                    <p><?php echo $adopted_count; ?></p>
-                    <small class="card-caption">All-time total</small>
-                </div>
-                <div class="card">
-                    <h3>Active Lost Reports</h3>
-                    <p><?php echo $active_lost_count; ?></p>
-                    <small class="card-caption">Still missing</small>
-                </div>
-            </div>
-
-            <div class="dash-chart-row">
-                <div class="dash-chart-card">
-                    <h4>Active Population</h4>
-                    <div class="dash-chart-canvas-wrap" style="height:260px;">
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+                <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px;">
+                    <h4 style="text-align:center; margin-bottom:15px; color:#555;">Active Population</h4>
+                    <div style="position: relative; height:250px;">
                         <canvas id="typeChart"></canvas>
                     </div>
                 </div>
 
-                <div class="dash-chart-card">
-                    <h4>Top 5 Available Breeds</h4>
-                    <div class="dash-chart-canvas-wrap" style="height:260px;">
+                <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px;">
+                    <h4 style="text-align:center; margin-bottom:15px; color:#555;">Top 5 Available Breeds</h4>
+                    <div style="position: relative; height:250px;">
                         <canvas id="breedChart"></canvas>
                     </div>
                 </div>
-            </div>
-
-            <div class="dash-chart-card dash-chart-wide">
-                <h4>Application Pipeline</h4>
-                <div class="dash-chart-canvas-wrap" style="height:280px;">
-                    <canvas id="appChart"></canvas>
+                
+                <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; grid-column: 1 / -1;">
+                    <h4 style="text-align:center; margin-bottom:15px; color:#555;">Application Pipeline</h4>
+                    <div style="position: relative; height:250px; max-height: 300px; display: flex; justify-content: center;">
+                        <canvas id="appChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
