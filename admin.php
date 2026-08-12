@@ -754,7 +754,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             <h3><i class="fas fa-chart-bar"></i> Descriptive Analytics</h3>
             <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">An overview of current shelter statistics and adoption pipelines.</p>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; max-width: 950px; margin: 0 auto;">
                 <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px;">
                     <h4 style="text-align:center; margin-bottom:15px; color:#555;">Active Population</h4>
                     <div style="position: relative; height:250px; max-width:280px; margin:0 auto;">
