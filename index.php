@@ -1,6 +1,14 @@
 <?php
 include 'db.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    error_log("DEBUG POST hit: content-length=" . ($_SERVER['CONTENT_LENGTH'] ?? 'unset')
+        . " post-keys=" . implode(',', array_keys($_POST))
+        . " files-keys=" . implode(',', array_keys($_FILES))
+        . " lf_photo-error=" . ($_FILES['lf_photo']['error'] ?? 'not-set')
+        . " lf_photo-size=" . ($_FILES['lf_photo']['size'] ?? 'not-set'));
+}
+
 // If an uploaded file exceeds post_max_size, PHP silently empties $_POST and
 // $_FILES entirely - without this check, the page just reloads with no
 // feedback and it looks like the form submission vanished.
