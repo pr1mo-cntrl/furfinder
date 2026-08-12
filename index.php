@@ -16,7 +16,7 @@ $activeTab = 'home';
 if (isset($_GET['tab'])) { $activeTab = $_GET['tab']; }
 if (isset($_POST['submit_lost_report'])) { $activeTab = 'lost'; }
 if (isset($_POST['submit_application'])) { $activeTab = 'adopt'; }
-if (isset($_POST['submit_donation'])) { $activeTab = 'donate'; }
+if (isset($_POST['submit_donation'])) { $activeTab = 'home'; }
 if (isset($_GET['search']) || isset($_GET['type_filter'])) { $activeTab = 'adopt'; }
 
 // --- APPLICATION STATUS NOTIFICATIONS ---
@@ -446,8 +446,8 @@ if ($progress_percent > 100) $progress_percent = 100;
         
         <ul class="nav-links" id="nav-links">
             <li><a onclick="showPage('home')" id="nav-home" class="active">Home</a></li>
-            <li><a onclick="showPage('shelters')" id="nav-shelters">Shelter</a></li>
-            <li><a onclick="showPage('donate')" id="nav-donate">In-Kind Donations</a></li>
+            <li><a onclick="goToHomeSection('shelter-section')" id="nav-shelters">Shelter</a></li>
+            <li><a onclick="goToHomeSection('donate-section')" id="nav-donate">In-Kind Donations</a></li>
             
             <?php if(isset($_SESSION['user_id'])): ?>
                 <li><a onclick="showPage('adopt')" id="nav-adopt">Adopt</a></li>
@@ -525,7 +525,27 @@ if ($progress_percent > 100) $progress_percent = 100;
                 </a>
             </div>
             <?php endif; ?>
-            
+
+        </div>
+
+        <div id="shelter-section" class="content-box">
+            <h2><i class="fas fa-house-medical"></i> Shelter</h2>
+            <?php
+            $cvao_status = "Open";
+            $cvao_res = $conn->query("SELECT status FROM shelters WHERE name LIKE '%Baguio%' LIMIT 1");
+            if($cvao_res && $r = $cvao_res->fetch(PDO::FETCH_ASSOC)) $cvao_status = $r['status'];
+            ?>
+            <div class="shelter-card" style="margin-bottom: 0; box-shadow: none; border: 1px solid var(--border-color);">
+                <div class="shelter-logo"><img src="uploads/shelter_cvao.jpg" onerror="this.src='https://via.placeholder.com/100?text=Logo'"></div>
+                <div class="shelter-info">
+                    <h3>Baguio City Vet Office <span class="status-badge <?php echo ($cvao_status=='Open')?'status-open':'status-full'; ?>"><?php echo $cvao_status; ?></span></h3>
+                    <ul>
+                        <li><i class="fas fa-map-marker-alt"></i> Slaughterhouse Cmpnd, Baguio</li>
+                        <li><a href="tel:0744435332" style="color:inherit; text-decoration:none;"><i class="fas fa-phone"></i> (074) 443-5332</a></li>
+                        <li><i class="far fa-clock"></i> Mon - Fri, 8AM - 5PM</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <div class="content-box">
@@ -570,6 +590,42 @@ if ($progress_percent > 100) $progress_percent = 100;
                 <li><strong>Valid Identification (ID):</strong> Present one of the following: UMID, Driver's License, PRC ID, etc.</li>
                 <li><strong>Dog Cage & Leash:</strong> Required for transport.</li>
             </ul>
+        </div>
+
+        <div id="donate-section" class="content-box">
+            <h2><i class="fas fa-hand-holding-heart"></i> In-Kind Donations</h2>
+            <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: var(--radius); border-left: 5px solid #dc3545; margin-bottom: 25px; text-align: center;">
+                <strong><i class="fas fa-exclamation-triangle"></i> CVAO Policy Notice:</strong><br>
+                The Baguio City Veterinary and Agriculture Office strictly accepts <strong>IN-KIND DONATIONS ONLY</strong>. We do not accept monetary donations (cash, GCash, or bank transfers).
+            </div>
+
+            <h3 style="text-align:center; color:var(--primary-color); margin-bottom: 20px;"><i class="fas fa-box-open"></i> What We Currently Need</h3>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; text-align: left;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: var(--radius); border: 1px solid var(--border-color);">
+                    <h4 style="color: var(--success); margin-top: 0;"><i class="fas fa-dog"></i> Food & Feeding</h4>
+                    <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
+                        <li>Adult Dog Food & Puppy Kibble</li>
+                        <li>Adult Cat Food & Kitten Wet Food</li>
+                        <li>Stainless Steel Feeding Bowls</li>
+                    </ul>
+                </div>
+
+                <div style="background: #f8f9fa; padding: 15px; border-radius: var(--radius); border: 1px solid var(--border-color);">
+                    <h4 style="color: #17a2b8; margin-top: 0;"><i class="fas fa-pump-soap"></i> Shelter Supplies</h4>
+                    <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
+                        <li>Leashes, Collars, and Harnesses</li>
+                        <li>Old Towels and Blankets</li>
+                        <li>Pet Soap, Shampoo, and Cleaning Brushes</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee;">
+                <p style="color: #666; margin: 0;">
+                    <strong>Drop-off Location:</strong> Baguio CVAO Compound, Slaughterhouse Compound, Magsaysay Ave.
+                </p>
+            </div>
         </div>
     </section>
 
@@ -825,63 +881,6 @@ if ($progress_percent > 100) $progress_percent = 100;
         </div>
     </section>
 
-    <section id="shelters" class="container">
-        <div class="section-header"><h2>Shelter</h2></div>
-        <?php
-        $cvao_status = "Open";
-        $cvao_res = $conn->query("SELECT status FROM shelters WHERE name LIKE '%Baguio%' LIMIT 1");
-        if($cvao_res && $r = $cvao_res->fetch(PDO::FETCH_ASSOC)) $cvao_status = $r['status'];
-        ?>
-        <div class="shelter-card">
-            <div class="shelter-logo"><img src="uploads/shelter_cvao.jpg" onerror="this.src='https://via.placeholder.com/100?text=Logo'"></div>
-            <div class="shelter-info">
-                <h3>Baguio City Vet Office <span class="status-badge <?php echo ($cvao_status=='Open')?'status-open':'status-full'; ?>"><?php echo $cvao_status; ?></span></h3>
-                <ul>
-                    <li><i class="fas fa-map-marker-alt"></i> Slaughterhouse Cmpnd, Baguio</li>
-                    <li><a href="tel:0744435332" style="color:inherit; text-decoration:none;"><i class="fas fa-phone"></i> (074) 443-5332</a></li>
-                    <li><i class="far fa-clock"></i> Mon - Fri, 8AM - 5PM</li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-    <section id="donate" class="container">
-        <div class="content-box" style="max-width:800px; margin:0 auto 2rem auto; padding: 20px;">
-            <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; margin-bottom: 25px; text-align: center;">
-                <strong><i class="fas fa-exclamation-triangle"></i> CVAO Policy Notice:</strong><br>
-                The Baguio City Veterinary and Agriculture Office strictly accepts <strong>IN-KIND DONATIONS ONLY</strong>. We do not accept monetary donations (cash, GCash, or bank transfers).
-            </div>
-
-            <h3 style="text-align:center; color:var(--primary-color); margin-bottom: 20px;"><i class="fas fa-box-open"></i> What We Currently Need</h3>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; text-align: left;">
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-                    <h4 style="color: var(--success); margin-top: 0;"><i class="fas fa-dog"></i> Food & Feeding</h4>
-                    <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
-                        <li>Adult Dog Food & Puppy Kibble</li>
-                        <li>Adult Cat Food & Kitten Wet Food</li>
-                        <li>Stainless Steel Feeding Bowls</li>
-                    </ul>
-                </div>
-                
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-                    <h4 style="color: #17a2b8; margin-top: 0;"><i class="fas fa-pump-soap"></i> Shelter Supplies</h4>
-                    <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
-                        <li>Leashes, Collars, and Harnesses</li>
-                        <li>Old Towels and Blankets</li>
-                        <li>Pet Soap, Shampoo, and Cleaning Brushes</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee;">
-                <p style="color: #666; margin: 0;">
-                    <strong>Drop-off Location:</strong> Baguio CVAO Compound, Slaughterhouse Compound, Magsaysay Ave.
-                </p>
-            </div>
-        </div>
-    </section>
-
     <div id="processModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeProcessModal()">×</span>
@@ -1010,17 +1009,32 @@ if ($progress_percent > 100) $progress_percent = 100;
         });
 
         function showPage(pageId) {
+            let target = document.getElementById(pageId);
+            if (!target || !target.classList.contains('container')) {
+                // Shelter/Donations used to be their own tabs (bookmarked/old links
+                // may still point at them) - they now live inside Home.
+                pageId = 'home';
+                target = document.getElementById('home');
+            }
             document.querySelectorAll('.container').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
+            target.classList.add('active');
             const link = document.getElementById('nav-' + pageId);
             if(link) link.classList.add('active');
-            
+
             document.getElementById('nav-links').classList.remove('active-nav');
         }
 
         function toggleMobileNav() {
             document.getElementById('nav-links').classList.toggle('active-nav');
+        }
+
+        function goToHomeSection(sectionId) {
+            showPage('home');
+            const target = document.getElementById(sectionId);
+            if (target) {
+                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+            }
         }
 
         function toggleNotifDropdown(event) {

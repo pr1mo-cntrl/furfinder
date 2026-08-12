@@ -142,7 +142,16 @@ if (isset($_POST['login'])) {
             background: white;
         }
 
-        .auth-shell { display: flex; min-height: 100vh; }
+        nav.site-nav { background-color: var(--primary-color); color: white; padding: 0.9rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 1px 2px rgba(16,24,40,0.06); }
+        nav.site-nav .logo { display: flex; align-items: center; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; gap: 10px; color: white; text-decoration: none; }
+        nav.site-nav .logo i { color: var(--accent-color); }
+        nav.site-nav .nav-links { list-style: none; display: flex; gap: 6px; align-items: center; margin: 0; padding: 0; }
+        nav.site-nav .nav-links a { color: rgba(255,255,255,0.9); text-decoration: none; font-weight: 500; font-size: 0.92rem; padding: 8px 14px; border-radius: var(--radius); transition: background-color 0.15s ease, color 0.15s ease; }
+        nav.site-nav .nav-links a:hover { background-color: rgba(255,255,255,0.12); color: var(--accent-color); }
+        nav.site-nav .nav-links a.auth-btn { background: var(--accent-color); color: var(--primary-color); font-weight: 600; }
+        nav.site-nav .menu-toggle { display: none; font-size: 1.5rem; cursor: pointer; color: white; background: none; border: none; }
+
+        .auth-shell { display: flex; min-height: calc(100vh - 60px); }
 
         /* LEFT: form panel */
         .auth-left {
@@ -152,9 +161,6 @@ if (isset($_POST['login'])) {
             justify-content: center;
             padding: 40px clamp(24px, 6vw, 80px);
         }
-        .brand { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 700; color: var(--primary-color); margin-bottom: 48px; letter-spacing: -0.01em; }
-        .brand i { color: var(--accent-color); }
-
         .auth-card { width: 100%; max-width: 400px; }
         .auth-card h1 { font-size: 1.9rem; margin: 0 0 6px; color: #111; letter-spacing: -0.02em; }
         .auth-card .auth-sub { color: #767e89; font-size: 0.95rem; margin: 0 0 28px; }
@@ -253,16 +259,41 @@ if (isset($_POST['login'])) {
             .auth-left { padding: 32px 24px; }
         }
         @media (max-width: 420px) {
-            .brand { margin-bottom: 32px; }
             .auth-card h1 { font-size: 1.6rem; }
+        }
+        @media (max-width: 768px) {
+            nav.site-nav .menu-toggle { display: block; }
+            nav.site-nav .nav-links {
+                display: none;
+                flex-direction: column;
+                width: 100%;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                background-color: var(--primary-color);
+                padding: 10px 0;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            }
+            nav.site-nav .nav-links.active-nav { display: flex; }
+            nav.site-nav .nav-links li { width: 100%; text-align: center; margin: 5px 0; }
+            nav.site-nav .nav-links a { display: inline-block; width: 90%; }
         }
     </style>
 </head>
 <body>
+    <nav class="site-nav">
+        <a href="index.php" class="logo"><i class="fas fa-paw"></i> FurFinder</a>
+        <button class="menu-toggle" onclick="document.querySelector('nav.site-nav .nav-links').classList.toggle('active-nav')"><i class="fas fa-bars"></i></button>
+        <ul class="nav-links">
+            <li><a href="index.php">Home</a></li>
+            <li><a href="index.php#shelter-section">Shelter</a></li>
+            <li><a href="index.php#donate-section">In-Kind Donations</a></li>
+            <li><a href="login.php" class="auth-btn">Login / Signup</a></li>
+        </ul>
+    </nav>
+
     <div class="auth-shell">
         <div class="auth-left">
-            <div class="brand"><i class="fas fa-paw"></i> FurFinder</div>
-
             <div class="auth-card" id="login-box" style="display:<?php echo $active_box === 'login' ? 'block' : 'none'; ?>;">
                 <h1>Welcome back</h1>
                 <p class="auth-sub">Sign in to help pets find their way home.</p>
