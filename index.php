@@ -555,7 +555,7 @@ if (isset($_SESSION['user_id'])) {
                             </details>
 
                             <div style='display:flex; gap:5px; margin-top:10px;'>
-                                <button class='btn-primary' style='flex:1; margin-top:0;' onclick=\"openAdoptModal('{$row['name']}')\">Apply to Adopt</button>
+                                <button class='btn-primary' style='flex:1; margin-top:0;' onclick=\"openProcessModal('{$row['name']}')\">Apply to Adopt</button>
                                 <button class='btn-secondary' onclick=\"sharePet('{$row['name']}', '{$row['breed']}')\"><i class='fas fa-share-alt'></i></button>
                             </div>
                         </div>
@@ -787,6 +787,32 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </section>
 
+    <div id="processModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeProcessModal()">×</span>
+            <h3>Adoption Process</h3>
+
+            <div style="margin-top:15px;">
+                <h4 style="color:var(--primary-color); margin-bottom:5px;">Step 1: Submit an Adoption Application</h4>
+                <p style="color:#666; margin-top:0;">Complete the adoption application form and provide all required information and supporting documents. After submitting your application, wait for your application to be reviewed.</p>
+
+                <h4 style="color:var(--primary-color); margin-bottom:5px;">Step 2: Application Approval</h4>
+                <p style="color:#666; margin-top:0;">Once your application has been reviewed and approved, you may proceed to the next step of the adoption process.</p>
+
+                <h4 style="color:var(--primary-color); margin-bottom:5px;">Step 3: Visit the City Veterinary Office</h4>
+                <p style="color:#666; margin-top:0;">Visit the City Veterinary Office for a face-to-face assessment and to meet and see your chosen pet in person.</p>
+
+                <h4 style="color:var(--primary-color); margin-bottom:5px;">Step 4: Complete the Adoption</h4>
+                <p style="color:#666; margin-top:0;">After completing the required process, settle the ₱700 adoption fee and complete the necessary adoption requirements. Once completed, you may bring your chosen pet home.</p>
+            </div>
+
+            <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
+                <p style="color:#666;"><strong>Ready to Apply?</strong> Click "Proceed to Application" to begin your adoption application.</p>
+                <button type="button" class="btn-primary" onclick="proceedToApplication()">Proceed to Application</button>
+            </div>
+        </div>
+    </div>
+
     <div id="adoptModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeAdoptModal()">×</span>
@@ -889,6 +915,20 @@ if (isset($_SESSION['user_id'])) {
                 icon.classList.remove('fa-chevron-up');
                 icon.classList.add('fa-chevron-down');
             }
+        }
+
+        let pendingAdoptPetName = '';
+
+        function openProcessModal(name) {
+            pendingAdoptPetName = name;
+            document.getElementById('processModal').style.display = 'flex';
+        }
+        function closeProcessModal() {
+            document.getElementById('processModal').style.display = 'none';
+        }
+        function proceedToApplication() {
+            closeProcessModal();
+            openAdoptModal(pendingAdoptPetName);
         }
 
         function openAdoptModal(name) {
