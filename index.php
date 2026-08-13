@@ -1055,7 +1055,7 @@ if ($progress_percent > 100) $progress_percent = 100;
                 })
                 .catch(() => { /* silent - next poll will retry */ });
         }
-        setInterval(pollNotifications, 15000);
+        setInterval(pollNotifications, 5000);
         <?php endif; ?>
 
         function toggleFaq(element) {

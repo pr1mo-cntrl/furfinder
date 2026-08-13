@@ -1,5 +1,6 @@
 <?php
 include 'db.php';
+include 'admin_helpers.php';
 
 // FIX: Start session and verify admin BEFORE any data can be modified
 if (session_status() == PHP_SESSION_NONE) {
@@ -798,67 +799,22 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="applications-tbody">
                     <?php
                     $apps = $conn->query("SELECT * FROM applications WHERE is_archived = 0 ORDER BY id DESC");
                     while($row = $apps->fetch(PDO::FETCH_ASSOC)):
-                        $safeData = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
-                        
-                        $clean_status = str_replace('_Seen', '', $row['status']);
-                        $statusClass = strtolower($clean_status);
-                        if ($statusClass == 'acknowledged') { $statusClass = 'rejected'; }
+                        echo renderApplicationRow($row);
+                    endwhile;
                     ?>
-                        <tr class="app-row status-<?php echo htmlspecialchars($statusClass); ?>">
-                            <td style="font-weight:bold; color:var(--primary-color);"><?php echo htmlspecialchars($row['pet_name']); ?></td>
-                            <td>
-                                <strong><?php echo htmlspecialchars($row['fullname']); ?></strong><br>
-                                <small><i class="fas fa-phone"></i> <?php echo htmlspecialchars($row['contact']); ?></small><br>
-                                <small><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($row['address']); ?></small>
-                                <button type="button" class="btn-view" onclick="viewAppDetails(<?php echo $safeData; ?>)">
-                                    <i class="fas fa-eye"></i> View Answers
-                                </button>
-                            </td>
-                            <td>
-                                <?php if(isset($row['barangay_cert']) && $row['barangay_cert']): ?>
-                                    <a href="<?php echo htmlspecialchars($row['barangay_cert']); ?>" target="_blank" class="doc-link"><i class="fas fa-file-contract"></i> View Brgy Cert</a>
-                                <?php else: ?>
-                                    <span style="color:#999; font-size:0.8rem;">No Brgy Cert</span><br>
-                                <?php endif; ?>
-                                
-                                <?php if(isset($row['valid_id']) && $row['valid_id']): ?>
-                                    <a href="<?php echo htmlspecialchars($row['valid_id']); ?>" target="_blank" class="doc-link"><i class="fas fa-id-card"></i> View Valid ID</a>
-                                <?php else: ?>
-                                    <span style="color:#999; font-size:0.8rem;">No ID</span><br>
-                                <?php endif; ?>
-
-                                <?php if(isset($row['cage_photo']) && $row['cage_photo']): ?>
-                                    <a href="<?php echo htmlspecialchars($row['cage_photo']); ?>" target="_blank" class="doc-link"><i class="fas fa-home"></i> View Cage/Leash</a>
-                                <?php else: ?>
-                                    <span style="color:#999; font-size:0.8rem;">No Cage Photo</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <form method="POST" class="app-status" style="display:flex; gap:5px; flex-wrap:wrap;">
-                                    <input type="hidden" name="app_id" value="<?php echo $row['id']; ?>">
-                                    <button type="submit" name="update_application" value="Pending" class="status-btn status-btn-pending<?php echo strpos($row['status'], 'Pending') !== false ? ' active' : ''; ?>">Pending</button>
-                                    <button type="submit" name="update_application" value="Approved" class="status-btn status-btn-approved<?php echo strpos($row['status'], 'Approved') !== false ? ' active' : ''; ?>">Approved</button>
-                                    <button type="submit" name="update_application" value="Rejected" class="status-btn status-btn-rejected<?php echo (strpos($row['status'], 'Rejected') !== false || $row['status'] == 'Acknowledged') ? ' active' : ''; ?>">Rejected</button>
-                                </form>
-                            </td>
-                            <td>
-                                <form method="POST" class="js-confirm" data-confirm-msg="Archive/Delete this application?">
-                                    <input type="hidden" name="app_id" value="<?php echo $row['id']; ?>">
-                                    <button type="submit" name="archive_application" class="btn-delete">Archive</button>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
                 </tbody>
             </table>
             </div>
             
             <script>
+            let currentAppFilter = 'pending';
+
             function filterApps(status, btn) {
+                currentAppFilter = status;
                 document.querySelectorAll('.app-tab-btn').forEach(b => {
                     b.style.background = '#e2e6ea';
                     b.style.color = '#333';
@@ -867,14 +823,38 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 btn.style.color = 'white';
 
                 document.querySelectorAll('.app-row').forEach(row => {
-                    row.style.display = 'none'; 
+                    row.style.display = 'none';
                     if (status === 'rejected' && (row.classList.contains('status-rejected') || row.classList.contains('status-acknowledged'))) {
-                        row.style.display = ''; 
+                        row.style.display = '';
                     } else if (row.classList.contains('status-' + status)) {
-                        row.style.display = ''; 
+                        row.style.display = '';
                     }
                 });
             }
+
+            function applyCurrentAppFilter() {
+                document.querySelectorAll('.app-row').forEach(row => {
+                    row.style.display = 'none';
+                    if (currentAppFilter === 'rejected' && (row.classList.contains('status-rejected') || row.classList.contains('status-acknowledged'))) {
+                        row.style.display = '';
+                    } else if (row.classList.contains('status-' + currentAppFilter)) {
+                        row.style.display = '';
+                    }
+                });
+            }
+
+            function pollApplications() {
+                fetch('admin_applications_fetch.php', { credentials: 'same-origin' })
+                    .then(res => res.ok ? res.json() : Promise.reject(res.status))
+                    .then(data => {
+                        const tbody = document.getElementById('applications-tbody');
+                        if (!tbody) return;
+                        tbody.innerHTML = data.html;
+                        applyCurrentAppFilter();
+                    })
+                    .catch(() => { /* silent - next poll will retry */ });
+            }
+            setInterval(pollApplications, 5000);
 
             document.addEventListener('DOMContentLoaded', () => {
                 const pendingBtn = document.querySelector('.app-tab-btn');
@@ -1108,18 +1088,20 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
     <script>
         let pendingConfirmForm = null;
         let pendingConfirmSubmitter = null;
-        document.querySelectorAll('form.js-confirm').forEach(function(form) {
-            form.addEventListener('submit', function(e) {
-                if (form.dataset.confirmed === 'true') {
-                    form.dataset.confirmed = 'false';
-                    return;
-                }
-                e.preventDefault();
-                pendingConfirmForm = form;
-                pendingConfirmSubmitter = e.submitter;
-                document.getElementById('genericConfirmMessage').textContent = form.dataset.confirmMsg || 'Are you sure?';
-                document.getElementById('genericConfirmModal').style.display = 'flex';
-            });
+        // Delegated on document (not querySelectorAll+forEach) so it also covers
+        // rows injected later by AJAX polling, not just what existed at page load.
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (!form.classList || !form.classList.contains('js-confirm')) return;
+            if (form.dataset.confirmed === 'true') {
+                form.dataset.confirmed = 'false';
+                return;
+            }
+            e.preventDefault();
+            pendingConfirmForm = form;
+            pendingConfirmSubmitter = e.submitter;
+            document.getElementById('genericConfirmMessage').textContent = form.dataset.confirmMsg || 'Are you sure?';
+            document.getElementById('genericConfirmModal').style.display = 'flex';
         });
         function closeGenericConfirm() {
             document.getElementById('genericConfirmModal').style.display = 'none';
@@ -1230,7 +1212,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 })
                 .catch(() => { /* silent - next poll will retry */ });
         }
-        setInterval(pollAdminStats, 15000);
+        setInterval(pollAdminStats, 5000);
 
         function openEditModal(id, name, breed, age, backstory, medical) {
             document.getElementById('edit_pet_id').value = id;
