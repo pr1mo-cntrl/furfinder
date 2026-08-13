@@ -1,5 +1,6 @@
 <?php
 include 'db.php';
+include 'notification_helper.php';
 
 // If an uploaded file exceeds post_max_size, PHP silently empties $_POST and
 // $_FILES entirely - without this check, the page just reloads with no
@@ -37,46 +38,7 @@ $notifications_html = '';
 $notification_count = 0;
 
 if (isset($_SESSION['user_id'])) {
-    $current_user_id = $_SESSION['user_id'];
-
-    $check_status = $conn->query("SELECT * FROM applications WHERE user_id = '$current_user_id' AND status IN ('Pending', 'Approved', 'Rejected')");
-
-    if ($check_status && $check_status->rowCount() > 0) {
-        while ($app = $check_status->fetch(PDO::FETCH_ASSOC)) {
-            $app_id = $app['id'];
-            $status = $app['status'];
-            $notification_count++;
-
-            if ($status == 'Pending') {
-                $notifications_html .= '
-                <div class="notif-item notif-pending">
-                    <strong>⏳ Application Pending:</strong> Your adoption application is currently under review by the CVAO team. We will update you here as soon as a decision is made!
-                </div>';
-            }
-            elseif ($status == 'Approved') {
-                $notifications_html .= '
-                <div class="notif-item notif-approved">
-                    <h4 style="margin-top: 0;">🎉 Application Approved!</h4>
-                    <p style="margin-bottom: 10px;">Your adoption application has been reviewed and approved. Please proceed to the Baguio City Veterinary and Agriculture Office (CVAO) for your physical screening and interview.</p>
-                    <form method="POST">
-                        <input type="hidden" name="app_id" value="' . $app_id . '">
-                        <button type="submit" name="dismiss_notification" class="notif-dismiss-btn notif-dismiss-approved">Okay, got it!</button>
-                    </form>
-                </div>';
-            }
-            elseif ($status == 'Rejected') {
-                $notifications_html .= '
-                <div class="notif-item notif-rejected">
-                    <h4 style="margin-top: 0;">❌ Application Update</h4>
-                    <p style="margin-bottom: 10px;">We regret to inform you that your recent adoption application was not approved by the CVAO at this time. Thank you for your interest in providing a home for our shelter pets.</p>
-                    <form method="POST">
-                        <input type="hidden" name="app_id" value="' . $app_id . '">
-                        <button type="submit" name="dismiss_notification" class="notif-dismiss-btn notif-dismiss-rejected">Dismiss</button>
-                    </form>
-                </div>';
-            }
-        }
-    }
+    list($notifications_html, $notification_count) = buildUserNotifications($conn, $_SESSION['user_id']);
 }
 
 // --- HANDLE USER MARKING PET AS FOUND ---
@@ -492,17 +454,17 @@ if ($progress_percent > 100) $progress_percent = 100;
                 <li class="notif-bell-wrap">
                     <span class="notif-bell" onclick="toggleNotifDropdown(event)">
                         <i class="fas fa-bell"></i>
-                        <?php if ($notification_count > 0): ?>
-                            <span class="notif-badge"><?php echo $notification_count; ?></span>
-                        <?php endif; ?>
+                        <span class="notif-badge" id="notif-badge" style="display:<?php echo $notification_count > 0 ? 'flex' : 'none'; ?>;"><?php echo $notification_count; ?></span>
                     </span>
                     <div class="notif-dropdown" id="notif-dropdown">
                         <div class="notif-dropdown-header">Notifications</div>
-                        <?php if ($notification_count > 0): ?>
-                            <?php echo $notifications_html; ?>
-                        <?php else: ?>
-                            <div class="notif-empty">You're all caught up — no notifications.</div>
-                        <?php endif; ?>
+                        <div id="notif-dropdown-body">
+                            <?php if ($notification_count > 0): ?>
+                                <?php echo $notifications_html; ?>
+                            <?php else: ?>
+                                <div class="notif-empty">You're all caught up — no notifications.</div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </li>
 
@@ -1075,6 +1037,26 @@ if ($progress_percent > 100) $progress_percent = 100;
                 dropdown.classList.remove('open');
             }
         });
+
+        <?php if (isset($_SESSION['user_id'])): ?>
+        function pollNotifications() {
+            fetch('notifications.php', { credentials: 'same-origin' })
+                .then(res => res.ok ? res.json() : Promise.reject(res.status))
+                .then(data => {
+                    const badge = document.getElementById('notif-badge');
+                    const body = document.getElementById('notif-dropdown-body');
+                    if (!badge || !body) return;
+
+                    badge.textContent = data.count;
+                    badge.style.display = data.count > 0 ? 'flex' : 'none';
+                    body.innerHTML = data.count > 0
+                        ? data.html
+                        : '<div class="notif-empty">You\'re all caught up — no notifications.</div>';
+                })
+                .catch(() => { /* silent - next poll will retry */ });
+        }
+        setInterval(pollNotifications, 15000);
+        <?php endif; ?>
 
         function toggleFaq(element) {
             element.classList.toggle('open');

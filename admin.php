@@ -464,19 +464,19 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         <div class="dashboard-stats">
             <div class="card" style="border-left-color: var(--primary-color);">
                 <h3>Total Pets</h3>
-                <p style="color: var(--primary-color);">
+                <p id="stat-total-pets" style="color: var(--primary-color);">
                     <?php echo htmlspecialchars($dog_count + $cat_count); ?>
                 </p>
             </div>
             <div class="card" style="border-left-color: var(--accent-color);">
                 <h3>Pending Applications</h3>
-                <p style="color: var(--accent-color);">
+                <p id="stat-pending-apps" style="color: var(--accent-color);">
                     <?php echo htmlspecialchars($app_pending); ?>
                 </p>
             </div>
             <div class="card" style="border-left-color: var(--danger);">
                 <h3>Lost Reports</h3>
-                <p style="color: var(--danger);">
+                <p id="stat-lost-reports" style="color: var(--danger);">
                     <?php echo $conn->query("SELECT COUNT(*) FROM lost_pets WHERE LOWER(status)='missing'")->fetchColumn() ?: 0; ?>
                 </p>
             </div>
@@ -1216,6 +1216,21 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             document.getElementById(sectionId).classList.add('active');
             element.classList.add('active');
         }
+
+        function pollAdminStats() {
+            fetch('admin_stats.php', { credentials: 'same-origin' })
+                .then(res => res.ok ? res.json() : Promise.reject(res.status))
+                .then(data => {
+                    const totalPets = document.getElementById('stat-total-pets');
+                    const pendingApps = document.getElementById('stat-pending-apps');
+                    const lostReports = document.getElementById('stat-lost-reports');
+                    if (totalPets) totalPets.textContent = data.total_pets;
+                    if (pendingApps) pendingApps.textContent = data.pending_applications;
+                    if (lostReports) lostReports.textContent = data.lost_reports;
+                })
+                .catch(() => { /* silent - next poll will retry */ });
+        }
+        setInterval(pollAdminStats, 15000);
 
         function openEditModal(id, name, breed, age, backstory, medical) {
             document.getElementById('edit_pet_id').value = id;
