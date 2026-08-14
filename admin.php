@@ -236,17 +236,54 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
 
 // --- ADMIN NOTIFICATION FEED ---
 // Incoming work the admin should be told about: someone applying to adopt, and
-// someone posting a lost pet. Neither table has a created_at, so id order
-// stands in for arrival order - which is also what the client's unread
-// high-water mark keys off. The two kinds are listed separately rather than
-// interleaved, since there's no shared key to sort them by.
-$notif_apps = [];
-$notif_apps_res = $conn->query("SELECT id, pet_name, fullname, status FROM applications WHERE is_archived = 0 ORDER BY id DESC LIMIT 10");
-if ($notif_apps_res) $notif_apps = $notif_apps_res->fetchAll(PDO::FETCH_ASSOC);
+// someone posting a lost pet. Both kinds go into one list, newest first.
+//
+// created_at is what makes that single ordering possible - see migrate.php. If
+// that migration hasn't been run yet the query below throws, and we fall back
+// to per-table id order so the bell still works, just grouped by type.
+$notif_items = [];
+$notif_merged_by_time = true;
 
-$notif_lost = [];
-$notif_lost_res = $conn->query("SELECT id, pet_name, location FROM lost_pets WHERE is_archived = 0 AND status = 'Missing' ORDER BY id DESC LIMIT 10");
-if ($notif_lost_res) $notif_lost = $notif_lost_res->fetchAll(PDO::FETCH_ASSOC);
+$notif_sql = "
+    SELECT id, 'application'::text AS kind, fullname::text AS actor, pet_name::text AS subject, status::text AS meta, created_at
+      FROM applications
+     WHERE is_archived = 0
+    UNION ALL
+    SELECT id, 'lost_pet'::text AS kind, NULL::text AS actor, pet_name::text AS subject, location::text AS meta, created_at
+      FROM lost_pets
+     WHERE is_archived = 0 AND status = 'Missing'
+     ORDER BY created_at DESC, id DESC
+     LIMIT 15";
+
+try {
+    $notif_items = $conn->query($notif_sql)->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Admin notifications: falling back to id order (run migrate.php?): " . $e->getMessage());
+    $notif_merged_by_time = false;
+    $notif_items = [];
+
+    $res = $conn->query("SELECT id, pet_name, fullname, status FROM applications WHERE is_archived = 0 ORDER BY id DESC LIMIT 10");
+    foreach (($res ? $res->fetchAll(PDO::FETCH_ASSOC) : []) as $r) {
+        $notif_items[] = ['id' => $r['id'], 'kind' => 'application', 'actor' => $r['fullname'], 'subject' => $r['pet_name'], 'meta' => $r['status'], 'created_at' => null];
+    }
+    $res = $conn->query("SELECT id, pet_name, location FROM lost_pets WHERE is_archived = 0 AND status = 'Missing' ORDER BY id DESC LIMIT 10");
+    foreach (($res ? $res->fetchAll(PDO::FETCH_ASSOC) : []) as $r) {
+        $notif_items[] = ['id' => $r['id'], 'kind' => 'lost_pet', 'actor' => null, 'subject' => $r['pet_name'], 'meta' => $r['location'], 'created_at' => null];
+    }
+}
+
+function notifAgo($timestamp) {
+    if (empty($timestamp)) return '';
+    $then = strtotime($timestamp);
+    if (!$then) return '';
+    $diff = time() - $then;
+    if ($diff < 0)     return 'just now';
+    if ($diff < 60)    return 'just now';
+    if ($diff < 3600)  return floor($diff / 60) . 'm ago';
+    if ($diff < 86400) return floor($diff / 3600) . 'h ago';
+    if ($diff < 604800) return floor($diff / 86400) . 'd ago';
+    return date('M j', $then);
+}
 
 // Emitted as a JSON island the charts read from, so live-sync can swap the
 // numbers in the same way it swaps a table body.
@@ -601,37 +638,39 @@ $is_live_fetch = isset($_GET['live']);
                     <!-- Swapped by live-sync whenever an application or lost pet
                          report changes, so a new alert lands without a refresh. -->
                     <div id="admin-notif-body" data-live="applications lost_pets">
-                        <?php if (empty($notif_apps) && empty($notif_lost)): ?>
+                        <?php if (empty($notif_items)): ?>
                             <div class="notif-empty">Nothing new right now.</div>
                         <?php else: ?>
-                            <?php if (!empty($notif_apps)): ?>
-                                <div class="notif-group">Adoption applications</div>
-                                <?php foreach ($notif_apps as $n): ?>
-                                <button type="button" class="notif-link" data-kind="application" data-id="<?php echo (int)$n['id']; ?>" data-goto="applications">
-                                    <i class="fas fa-file-alt"></i>
-                                    <span>
-                                        <strong><?php echo htmlspecialchars($n['fullname']); ?></strong>
+                            <?php if (!$notif_merged_by_time): ?>
+                                <div class="notif-group">Grouped by type &mdash; run migrate.php to sort by time</div>
+                            <?php endif; ?>
+                            <?php foreach ($notif_items as $n):
+                                $is_app = ($n['kind'] === 'application');
+                                $ago = notifAgo($n['created_at']);
+                            ?>
+                            <button type="button" class="notif-link"
+                                    data-kind="<?php echo $is_app ? 'application' : 'lost_pet'; ?>"
+                                    data-id="<?php echo (int)$n['id']; ?>"
+                                    data-goto="<?php echo $is_app ? 'applications' : 'lost-found'; ?>">
+                                <i class="fas <?php echo $is_app ? 'fa-file-alt' : 'fa-search-location'; ?>"></i>
+                                <span>
+                                    <?php if ($is_app): ?>
+                                        <strong><?php echo htmlspecialchars($n['actor']); ?></strong>
                                         applied to adopt
-                                        <strong><?php echo htmlspecialchars($n['pet_name']); ?></strong>
-                                        <span class="notif-meta"><?php echo htmlspecialchars(str_replace('_Seen', '', $n['status'])); ?></span>
-                                    </span>
-                                </button>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-
-                            <?php if (!empty($notif_lost)): ?>
-                                <div class="notif-group">Lost pet reports</div>
-                                <?php foreach ($notif_lost as $n): ?>
-                                <button type="button" class="notif-link" data-kind="lost_pet" data-id="<?php echo (int)$n['id']; ?>" data-goto="lost-found">
-                                    <i class="fas fa-search-location"></i>
-                                    <span>
-                                        <strong><?php echo htmlspecialchars($n['pet_name']); ?></strong>
+                                        <strong><?php echo htmlspecialchars($n['subject']); ?></strong>
+                                    <?php else: ?>
+                                        <strong><?php echo htmlspecialchars($n['subject']); ?></strong>
                                         reported missing
-                                        <span class="notif-meta"><?php echo htmlspecialchars($n['location']); ?></span>
+                                    <?php endif; ?>
+                                    <span class="notif-meta">
+                                        <?php echo htmlspecialchars(str_replace('_Seen', '', (string)$n['meta'])); ?>
+                                        <?php if ($ago !== ''): ?>
+                                            &middot; <?php echo htmlspecialchars($ago); ?>
+                                        <?php endif; ?>
                                     </span>
-                                </button>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
+                                </span>
+                            </button>
+                            <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
                 </div>
