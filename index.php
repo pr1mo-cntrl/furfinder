@@ -1077,17 +1077,11 @@ $is_live_fetch = isset($_GET['live']);
                     <label style="display: block; margin-bottom: 5px;">3. Photo of Pet Cage or Secure Area</label>
                     <input type="file" name="cage_photo" accept="image/*" required style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
                 </div>
-<<<<<<< HEAD
-                <button type="submit" name="submit_application" class="btn-primary">Submit Application</button>
-=======
                 <button type="button" class="btn-primary" onclick="return validateAndConfirmApplication()">Submit Application</button>
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
             </form>
         </div>
     </div>
 
-<<<<<<< HEAD
-=======
     <div id="confirmSubmitModal" class="modal">
         <div class="modal-content confirm-modal-content">
             <h3 style="margin-top:0;">Submit Application?</h3>
@@ -1110,7 +1104,6 @@ $is_live_fetch = isset($_GET['live']);
         </div>
     </div>
 
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
     <script>
         window.addEventListener('load', () => {
             const loader = document.getElementById('loader');
@@ -1131,17 +1124,8 @@ $is_live_fetch = isset($_GET['live']);
             document.getElementById(pageId).classList.add('active');
             const link = document.getElementById('nav-' + pageId);
             if(link) link.classList.add('active');
-<<<<<<< HEAD
-            
-            document.getElementById('nav-links').classList.remove('active-nav');
-        }
-
-        function toggleMobileNav() {
-            document.getElementById('nav-links').classList.toggle('active-nav');
-=======
 
             document.getElementById('nav-links').classList.remove('active-nav');
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         }
 
         function toggleMobileNav() {
@@ -1302,34 +1286,6 @@ $is_live_fetch = isset($_GET['live']);
             }
         }
 
-<<<<<<< HEAD
-        function switchLfTab(tabName) {
-            var btnMissing = document.getElementById('tab-btn-missing');
-            var btnFound = document.getElementById('tab-btn-found');
-            var feedMissing = document.getElementById('feed-missing');
-            var feedFound = document.getElementById('feed-found');
-            
-            if (tabName === 'missing') {
-                btnMissing.style.background = 'var(--danger)';
-                btnMissing.style.color = 'white';
-                btnFound.style.background = '#e2e6ea';
-                btnFound.style.color = '#333';
-                
-                feedMissing.style.display = 'block';
-                feedFound.style.display = 'none';
-            } else {
-                btnFound.style.background = 'var(--success)';
-                btnFound.style.color = 'white';
-                btnMissing.style.background = '#e2e6ea';
-                btnMissing.style.color = '#333';
-                
-                feedFound.style.display = 'block';
-                feedMissing.style.display = 'none';
-            }
-        }
-
-=======
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         document.addEventListener('DOMContentLoaded', () => { showPage('<?php echo $activeTab; ?>'); });
     </script>
 </body>
