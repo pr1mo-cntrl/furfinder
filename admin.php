@@ -234,6 +234,20 @@ $app_pending = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE
 $app_approved = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Approved%' AND is_archived=0")->fetchColumn() ?: 0;
 $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LIKE 'Rejected%' OR status='Acknowledged') AND is_archived=0")->fetchColumn() ?: 0;
 
+// --- ADMIN NOTIFICATION FEED ---
+// Incoming work the admin should be told about: someone applying to adopt, and
+// someone posting a lost pet. Neither table has a created_at, so id order
+// stands in for arrival order - which is also what the client's unread
+// high-water mark keys off. The two kinds are listed separately rather than
+// interleaved, since there's no shared key to sort them by.
+$notif_apps = [];
+$notif_apps_res = $conn->query("SELECT id, pet_name, fullname, status FROM applications WHERE is_archived = 0 ORDER BY id DESC LIMIT 10");
+if ($notif_apps_res) $notif_apps = $notif_apps_res->fetchAll(PDO::FETCH_ASSOC);
+
+$notif_lost = [];
+$notif_lost_res = $conn->query("SELECT id, pet_name, location FROM lost_pets WHERE is_archived = 0 AND status = 'Missing' ORDER BY id DESC LIMIT 10");
+if ($notif_lost_res) $notif_lost = $notif_lost_res->fetchAll(PDO::FETCH_ASSOC);
+
 // Emitted as a JSON island the charts read from, so live-sync can swap the
 // numbers in the same way it swaps a table body.
 $analytics_payload = [
@@ -326,6 +340,63 @@ $is_live_fetch = isset($_GET['live']);
         .section.active { display: block; }
         .section h3 { margin-bottom: 18px; color: var(--primary-color); font-size: 1.15rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
         .section-note { font-size: 0.875rem; color: #767e89; margin: -6px 0 20px; }
+
+        /* Admin notification bell */
+        .admin-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+        .admin-header h1 { font-size: 1.6rem; font-weight: 700; color: var(--text-dark); }
+        .notif-bell-wrap { position: relative; flex-shrink: 0; }
+        .notif-bell {
+            position: relative;
+            color: var(--primary-color);
+            font-size: 1.15rem;
+            cursor: pointer;
+            padding: 9px 12px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            background: var(--white);
+            display: inline-block;
+            box-shadow: var(--shadow-sm);
+        }
+        .notif-bell:hover { background-color: #f8f9fa; }
+        .notif-badge {
+            position: absolute; top: -6px; right: -6px;
+            background: var(--danger); color: var(--white);
+            font-size: 0.65rem; font-weight: 700;
+            min-width: 17px; height: 17px; border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 4px; border: 2px solid var(--white);
+        }
+        .notif-dropdown {
+            display: none; position: absolute; top: 115%; right: 0;
+            background: var(--white); color: var(--text-dark);
+            width: 340px; max-width: 90vw; max-height: 420px; overflow-y: auto;
+            border-radius: var(--radius); border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md); z-index: 3000; text-align: left;
+        }
+        .notif-dropdown.open { display: block; }
+        .notif-dropdown-header {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 11px 14px; font-weight: 700; font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color); background: #f8f9fa;
+            position: sticky; top: 0;
+        }
+        .notif-markall { background: none; border: none; color: var(--primary-color); font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0; }
+        .notif-markall:hover { text-decoration: underline; }
+        .notif-group { padding: 9px 14px 5px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #767e89; }
+        .notif-link {
+            display: flex; gap: 10px; align-items: flex-start; width: 100%;
+            padding: 10px 14px; border: none; border-bottom: 1px solid #eee;
+            background: none; text-align: left; cursor: pointer;
+            font-family: inherit; font-size: 0.85rem; color: var(--text-dark);
+        }
+        .notif-link:hover { background: #f8f9fa; }
+        .notif-link i { color: #767e89; margin-top: 2px; flex-shrink: 0; }
+        .notif-link .notif-meta { display: block; color: #767e89; font-size: 0.75rem; margin-top: 2px; }
+        /* Unread: highlighted until the next time the bell is opened. */
+        .notif-link.is-new { background: #fffbe6; }
+        .notif-link.is-new:hover { background: #fff6cc; }
+        .notif-link.is-new i { color: var(--accent-color); }
+        .notif-empty { padding: 22px 15px; color: #888; text-align: center; font-size: 0.88rem; }
 
         /* Shared tab bar - same visual language as the Manage Pets toolbar */
         .tab-bar { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; flex-wrap: wrap; }
@@ -514,7 +585,58 @@ $is_live_fetch = isset($_GET['live']);
     </div>
 
     <div class="content">
-        <h1>Welcome, Admin!</h1>
+        <div class="admin-header">
+            <h1>Welcome, Admin!</h1>
+
+            <div class="notif-bell-wrap">
+                <span class="notif-bell" id="admin-notif-bell" role="button" tabindex="0" title="Notifications" onclick="toggleAdminNotif(event)">
+                    <i class="fas fa-bell"></i>
+                    <span class="notif-badge" id="admin-notif-badge" style="display:none;">0</span>
+                </span>
+                <div class="notif-dropdown" id="admin-notif-dropdown">
+                    <div class="notif-dropdown-header">
+                        <span>Notifications</span>
+                        <button type="button" class="notif-markall" id="admin-notif-markall">Mark all read</button>
+                    </div>
+                    <!-- Swapped by live-sync whenever an application or lost pet
+                         report changes, so a new alert lands without a refresh. -->
+                    <div id="admin-notif-body" data-live="applications lost_pets">
+                        <?php if (empty($notif_apps) && empty($notif_lost)): ?>
+                            <div class="notif-empty">Nothing new right now.</div>
+                        <?php else: ?>
+                            <?php if (!empty($notif_apps)): ?>
+                                <div class="notif-group">Adoption applications</div>
+                                <?php foreach ($notif_apps as $n): ?>
+                                <button type="button" class="notif-link" data-kind="application" data-id="<?php echo (int)$n['id']; ?>" data-goto="applications">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>
+                                        <strong><?php echo htmlspecialchars($n['fullname']); ?></strong>
+                                        applied to adopt
+                                        <strong><?php echo htmlspecialchars($n['pet_name']); ?></strong>
+                                        <span class="notif-meta"><?php echo htmlspecialchars(str_replace('_Seen', '', $n['status'])); ?></span>
+                                    </span>
+                                </button>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+
+                            <?php if (!empty($notif_lost)): ?>
+                                <div class="notif-group">Lost pet reports</div>
+                                <?php foreach ($notif_lost as $n): ?>
+                                <button type="button" class="notif-link" data-kind="lost_pet" data-id="<?php echo (int)$n['id']; ?>" data-goto="lost-found">
+                                    <i class="fas fa-search-location"></i>
+                                    <span>
+                                        <strong><?php echo htmlspecialchars($n['pet_name']); ?></strong>
+                                        reported missing
+                                        <span class="notif-meta"><?php echo htmlspecialchars($n['location']); ?></span>
+                                    </span>
+                                </button>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="dashboard-stats" id="dashboard-stats" data-live="pets lost_pets applications">
             <div class="card" style="border-left-color: var(--primary-color);">
@@ -1254,9 +1376,118 @@ $is_live_fetch = isset($_GET['live']);
 
         window.addEventListener('hashchange', restoreSection);
 
+        // --- Admin notifications ---------------------------------------------
+        // Which alerts are "new" is per-admin, and neither table has a read flag,
+        // so the browser keeps a high-water mark of the highest id already seen
+        // per kind. That avoids a schema change, and the ids only ever grow.
+        const NOTIF_SEEN_KEY = 'furfinder_admin_notif_seen';
+
+        function readSeen() {
+            try {
+                const raw = localStorage.getItem(NOTIF_SEEN_KEY);
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function writeSeen(seen) {
+            try { localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify(seen)); } catch (e) { /* not fatal */ }
+        }
+
+        function notifLinks() {
+            return Array.from(document.querySelectorAll('#admin-notif-body .notif-link'));
+        }
+
+        function currentMaxIds() {
+            const max = {};
+            notifLinks().forEach(el => {
+                const kind = el.dataset.kind;
+                const id = parseInt(el.dataset.id, 10);
+                if (!isNaN(id)) max[kind] = Math.max(max[kind] || 0, id);
+            });
+            return max;
+        }
+
+        function refreshNotifBadge() {
+            const seen = readSeen() || {};
+            const badge = document.getElementById('admin-notif-badge');
+            let unread = 0;
+
+            notifLinks().forEach(el => {
+                const id = parseInt(el.dataset.id, 10);
+                const isNew = !isNaN(id) && id > (seen[el.dataset.kind] || 0);
+                el.classList.toggle('is-new', isNew);
+                if (isNew) unread++;
+            });
+
+            if (badge) {
+                badge.textContent = unread;
+                badge.style.display = unread > 0 ? 'flex' : 'none';
+            }
+        }
+
+        // clearHighlights: the explicit "Mark all read" button wipes the amber
+        // rows immediately; merely opening the bell clears the count but leaves
+        // them marked so you can still see which ones were new.
+        function markNotificationsRead(clearHighlights) {
+            const seen = readSeen() || {};
+            const max = currentMaxIds();
+            Object.keys(max).forEach(kind => {
+                seen[kind] = Math.max(seen[kind] || 0, max[kind]);
+            });
+            writeSeen(seen);
+
+            const badge = document.getElementById('admin-notif-badge');
+            if (badge) badge.style.display = 'none';
+            if (clearHighlights) {
+                notifLinks().forEach(el => el.classList.remove('is-new'));
+            }
+        }
+
+        function toggleAdminNotif(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('admin-notif-dropdown');
+            const opening = !dropdown.classList.contains('open');
+            dropdown.classList.toggle('open');
+            if (opening) markNotificationsRead(false);
+        }
+
+        document.addEventListener('click', function (event) {
+            const dropdown = document.getElementById('admin-notif-dropdown');
+            if (!dropdown || !dropdown.classList.contains('open')) return;
+            if (dropdown.contains(event.target) || event.target.closest('#admin-notif-bell')) return;
+            dropdown.classList.remove('open');
+        });
+
+        // Delegated: the list is replaced wholesale by live-sync.
+        document.addEventListener('click', function (event) {
+            if (event.target.closest('#admin-notif-markall')) {
+                markNotificationsRead(true);
+                return;
+            }
+            const link = event.target.closest('#admin-notif-body .notif-link');
+            if (!link) return;
+            document.getElementById('admin-notif-dropdown').classList.remove('open');
+            showSection(link.dataset.goto);
+            if (window.history && history.replaceState) {
+                history.replaceState(null, '', '#' + link.dataset.goto);
+            }
+        });
+
+        function initNotifications() {
+            // First run on this browser starts quiet: everything already on the
+            // page counts as seen, so the bell only speaks up for what arrives
+            // from here on rather than dumping the whole backlog.
+            if (readSeen() === null) writeSeen(currentMaxIds());
+            refreshNotifBadge();
+        }
+
         // Run immediately (this script is at the end of <body>) rather than on
-        // DOMContentLoaded, so the correct section is up before the first paint.
+        // DOMContentLoaded, so the correct section and badge are up before the
+        // first paint.
         restoreSection();
+        initNotifications();
 
         function openEditModal(id, name, breed, age, backstory, medical) {
             document.getElementById('edit_pet_id').value = id;
@@ -1388,6 +1619,9 @@ $is_live_fetch = isset($_GET['live']);
             if (changed.includes('applications')) applyCurrentAppFilter();
             // Both datasets feed the analytics island.
             if (changed.includes('pets') || changed.includes('applications')) refreshCharts();
+            // A freshly swapped notification list arrives without its unread
+            // marks - recompute them against the stored high-water mark.
+            if (changed.includes('applications') || changed.includes('lost_pets')) refreshNotifBadge();
         });
 
         document.addEventListener('DOMContentLoaded', () => {
