@@ -121,8 +121,15 @@ if (isset($_POST['update_shelter'])) {
 if (isset($_POST['update_application'])) {
     $id = $_POST['app_id'];
     $status = $_POST['update_application'];
-    $stmt = $conn->prepare("UPDATE applications SET status = ? WHERE id = ?");
-    $stmt->execute([$status, $id]);
+    // status_updated_at is what the applicant's notification sorts on.
+    try {
+        $stmt = $conn->prepare("UPDATE applications SET status = ?, status_updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$status, $id]);
+    } catch (PDOException $e) {
+        error_log('update_application: no status_updated_at column yet (run migrate.php?): ' . $e->getMessage());
+        $stmt = $conn->prepare("UPDATE applications SET status = ? WHERE id = ?");
+        $stmt->execute([$status, $id]);
+    }
     $_SESSION['admin_flash'] = 'Application status updated to ' . $status . '.';
     header("Location: admin.php");
     exit();
@@ -131,9 +138,18 @@ if (isset($_POST['update_application'])) {
 // 5. Handle Lost Pet Status Update (Mark Found)
 if (isset($_POST['mark_found'])) {
     $id = $_POST['lost_pet_id'];
-    $stmt = $conn->prepare("UPDATE lost_pets SET status = 'Found' WHERE id = ?");
-    $stmt->execute([$id]);
-    $_SESSION['admin_flash'] = 'Lost pet marked as found.';
+    // found_at drives the announcement in every user's bell and the 3-day
+    // window the resolved post stays on the public feed. Falls back if
+    // migrate.php hasn't added the column yet.
+    try {
+        $stmt = $conn->prepare("UPDATE lost_pets SET status = 'Found', found_at = NOW() WHERE id = ?");
+        $stmt->execute([$id]);
+    } catch (PDOException $e) {
+        error_log('mark_found: no found_at column yet (run migrate.php?): ' . $e->getMessage());
+        $stmt = $conn->prepare("UPDATE lost_pets SET status = 'Found' WHERE id = ?");
+        $stmt->execute([$id]);
+    }
+    $_SESSION['admin_flash'] = 'Lost pet marked as found. All users have been notified.';
     header("Location: admin.php");
     exit();
 }
@@ -307,6 +323,7 @@ $is_live_fetch = isset($_GET['live']);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="live-sync.js" defer></script>
+    <script src="notifications.js" defer></script>
     <style>
         :root {
             --primary-color: #003366;
@@ -626,7 +643,7 @@ $is_live_fetch = isset($_GET['live']);
             <h1>Welcome, Admin!</h1>
 
             <div class="notif-bell-wrap">
-                <span class="notif-bell" id="admin-notif-bell" role="button" tabindex="0" title="Notifications" onclick="toggleAdminNotif(event)">
+                <span class="notif-bell" id="admin-notif-bell" role="button" tabindex="0" title="Notifications">
                     <i class="fas fa-bell"></i>
                     <span class="notif-badge" id="admin-notif-badge" style="display:none;">0</span>
                 </span>
@@ -1415,118 +1432,9 @@ $is_live_fetch = isset($_GET['live']);
 
         window.addEventListener('hashchange', restoreSection);
 
-        // --- Admin notifications ---------------------------------------------
-        // Which alerts are "new" is per-admin, and neither table has a read flag,
-        // so the browser keeps a high-water mark of the highest id already seen
-        // per kind. That avoids a schema change, and the ids only ever grow.
-        const NOTIF_SEEN_KEY = 'furfinder_admin_notif_seen';
-
-        function readSeen() {
-            try {
-                const raw = localStorage.getItem(NOTIF_SEEN_KEY);
-                return raw ? JSON.parse(raw) : null;
-            } catch (e) {
-                return null;
-            }
-        }
-
-        function writeSeen(seen) {
-            try { localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify(seen)); } catch (e) { /* not fatal */ }
-        }
-
-        function notifLinks() {
-            return Array.from(document.querySelectorAll('#admin-notif-body .notif-link'));
-        }
-
-        function currentMaxIds() {
-            const max = {};
-            notifLinks().forEach(el => {
-                const kind = el.dataset.kind;
-                const id = parseInt(el.dataset.id, 10);
-                if (!isNaN(id)) max[kind] = Math.max(max[kind] || 0, id);
-            });
-            return max;
-        }
-
-        function refreshNotifBadge() {
-            const seen = readSeen() || {};
-            const badge = document.getElementById('admin-notif-badge');
-            let unread = 0;
-
-            notifLinks().forEach(el => {
-                const id = parseInt(el.dataset.id, 10);
-                const isNew = !isNaN(id) && id > (seen[el.dataset.kind] || 0);
-                el.classList.toggle('is-new', isNew);
-                if (isNew) unread++;
-            });
-
-            if (badge) {
-                badge.textContent = unread;
-                badge.style.display = unread > 0 ? 'flex' : 'none';
-            }
-        }
-
-        // clearHighlights: the explicit "Mark all read" button wipes the amber
-        // rows immediately; merely opening the bell clears the count but leaves
-        // them marked so you can still see which ones were new.
-        function markNotificationsRead(clearHighlights) {
-            const seen = readSeen() || {};
-            const max = currentMaxIds();
-            Object.keys(max).forEach(kind => {
-                seen[kind] = Math.max(seen[kind] || 0, max[kind]);
-            });
-            writeSeen(seen);
-
-            const badge = document.getElementById('admin-notif-badge');
-            if (badge) badge.style.display = 'none';
-            if (clearHighlights) {
-                notifLinks().forEach(el => el.classList.remove('is-new'));
-            }
-        }
-
-        function toggleAdminNotif(event) {
-            event.stopPropagation();
-            const dropdown = document.getElementById('admin-notif-dropdown');
-            const opening = !dropdown.classList.contains('open');
-            dropdown.classList.toggle('open');
-            if (opening) markNotificationsRead(false);
-        }
-
-        document.addEventListener('click', function (event) {
-            const dropdown = document.getElementById('admin-notif-dropdown');
-            if (!dropdown || !dropdown.classList.contains('open')) return;
-            if (dropdown.contains(event.target) || event.target.closest('#admin-notif-bell')) return;
-            dropdown.classList.remove('open');
-        });
-
-        // Delegated: the list is replaced wholesale by live-sync.
-        document.addEventListener('click', function (event) {
-            if (event.target.closest('#admin-notif-markall')) {
-                markNotificationsRead(true);
-                return;
-            }
-            const link = event.target.closest('#admin-notif-body .notif-link');
-            if (!link) return;
-            document.getElementById('admin-notif-dropdown').classList.remove('open');
-            showSection(link.dataset.goto);
-            if (window.history && history.replaceState) {
-                history.replaceState(null, '', '#' + link.dataset.goto);
-            }
-        });
-
-        function initNotifications() {
-            // First run on this browser starts quiet: everything already on the
-            // page counts as seen, so the bell only speaks up for what arrives
-            // from here on rather than dumping the whole backlog.
-            if (readSeen() === null) writeSeen(currentMaxIds());
-            refreshNotifBadge();
-        }
-
         // Run immediately (this script is at the end of <body>) rather than on
-        // DOMContentLoaded, so the correct section and badge are up before the
-        // first paint.
+        // DOMContentLoaded, so the correct section is up before the first paint.
         restoreSection();
-        initNotifications();
 
         function openEditModal(id, name, breed, age, backstory, medical) {
             document.getElementById('edit_pet_id').value = id;
@@ -1658,13 +1566,27 @@ $is_live_fetch = isset($_GET['live']);
             if (changed.includes('applications')) applyCurrentAppFilter();
             // Both datasets feed the analytics island.
             if (changed.includes('pets') || changed.includes('applications')) refreshCharts();
-            // A freshly swapped notification list arrives without its unread
-            // marks - recompute them against the stored high-water mark.
-            if (changed.includes('applications') || changed.includes('lost_pets')) refreshNotifBadge();
+            // The notification bell re-marks itself - notifications.js listens
+            // for this event too.
         });
 
         document.addEventListener('DOMContentLoaded', () => {
             buildCharts();
+            NotificationBell.create({
+                storageKey: 'furfinder_admin_notif_seen',
+                bellId: 'admin-notif-bell',
+                badgeId: 'admin-notif-badge',
+                dropdownId: 'admin-notif-dropdown',
+                bodyId: 'admin-notif-body',
+                markAllId: 'admin-notif-markall',
+                datasets: ['applications', 'lost_pets'],
+                onSelect: (link) => {
+                    showSection(link.dataset.goto);
+                    if (window.history && history.replaceState) {
+                        history.replaceState(null, '', '#' + link.dataset.goto);
+                    }
+                }
+            });
             LiveSync.start({ interval: 5000 });
         });
     </script>

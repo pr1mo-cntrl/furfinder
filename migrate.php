@@ -24,6 +24,20 @@ $migrations = [
         "ALTER TABLE applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()",
     'lost_pets.created_at' =>
         "ALTER TABLE lost_pets ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()",
+
+    // When a pet was reunited, as opposed to when it was reported. Drives the
+    // "found" announcement in every user's bell and the 3-day window the
+    // resolved post stays on the public feed. No default: NULL means "not
+    // found yet", and back-filling every old row with NOW() would announce a
+    // pile of stale reunions.
+    'lost_pets.found_at' =>
+        "ALTER TABLE lost_pets ADD COLUMN IF NOT EXISTS found_at TIMESTAMPTZ",
+
+    // When the admin last approved/rejected an application. The applicant's
+    // notification sorts on this - created_at would bury a decision made today
+    // on an application filed last month.
+    'applications.status_updated_at' =>
+        "ALTER TABLE applications ADD COLUMN IF NOT EXISTS status_updated_at TIMESTAMPTZ",
 ];
 
 echo '<!doctype html><meta charset="utf-8"><title>FurFinder migrations</title>';

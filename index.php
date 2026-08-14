@@ -46,9 +46,17 @@ if (isset($_POST['mark_as_found'])) {
     $report_id = $_POST['report_id'];
     $current_user = $_SESSION['user_id'];
     
-    $update_query = "UPDATE lost_pets SET status = 'Found' WHERE id = ? AND user_id = ?";
-    $stmt = $conn->prepare($update_query);
-    if ($stmt->execute([$report_id, $current_user])) {
+    // found_at drives the announcement in everyone's bell and the 3-day window
+    // the resolved post stays on the public feed.
+    try {
+        $stmt = $conn->prepare("UPDATE lost_pets SET status = 'Found', found_at = NOW() WHERE id = ? AND user_id = ?");
+        $ok = $stmt->execute([$report_id, $current_user]);
+    } catch (PDOException $e) {
+        error_log('mark_as_found: no found_at column yet (run migrate.php?): ' . $e->getMessage());
+        $stmt = $conn->prepare("UPDATE lost_pets SET status = 'Found' WHERE id = ? AND user_id = ?");
+        $ok = $stmt->execute([$report_id, $current_user]);
+    }
+    if ($ok) {
         $_SESSION['flash_msg'] = "Great news! Your pet has been marked as Found.";
         header("Location: index.php?tab=lost");
         exit();
@@ -215,6 +223,7 @@ $is_live_fetch = isset($_GET['live']);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="live-sync.js" defer></script>
+    <script src="notifications.js" defer></script>
 
     <style>
         :root {
@@ -260,14 +269,27 @@ $is_live_fetch = isset($_GET['live']);
         .notif-badge { position: absolute; top: 2px; right: 4px; background: var(--danger); color: white; font-size: 0.62rem; font-weight: 700; min-width: 15px; height: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
         .notif-dropdown { display: none; position: absolute; top: 110%; right: 0; background: white; color: #333; width: 320px; max-width: 90vw; max-height: 400px; overflow-y: auto; border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: var(--shadow-md); z-index: 3000; text-align: left; }
         .notif-dropdown.open { display: block; }
-        .notif-dropdown-header { padding: 12px 15px; font-weight: 700; font-size: 0.85rem; border-bottom: 1px solid var(--border-color); background: #f8f9fa; }
-        .notif-empty { padding: 20px 15px; color: #888; text-align: center; font-size: 0.9rem; }
-        .notif-item { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-        .notif-item:last-child { border-bottom: none; }
-        .notif-item form { margin-top: 8px; }
-        .notif-pending { background: #fff3cd; color: #856404; }
-        .notif-approved { background: #d4edda; color: #155724; }
-        .notif-rejected { background: #f8d7da; color: #721c24; }
+        .notif-dropdown-header {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 11px 14px; font-weight: 700; font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color); background: #f8f9fa;
+            position: sticky; top: 0;
+        }
+        .notif-markall { background: none; border: none; color: var(--primary-color); font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; }
+        .notif-markall:hover { text-decoration: underline; }
+        .notif-empty { padding: 22px 15px; color: #888; text-align: center; font-size: 0.88rem; }
+        /* One row per alert, matching the admin panel's bell. */
+        .notif-link { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-bottom: 1px solid #eee; font-size: 0.85rem; line-height: 1.45; }
+        .notif-link:last-child { border-bottom: none; }
+        .notif-link i { margin-top: 3px; flex-shrink: 0; }
+        .notif-link strong { display: inline; }
+        .notif-link .notif-meta { display: block; color: #767e89; font-size: 0.75rem; margin-top: 3px; }
+        .notif-link form { margin-top: 8px; }
+        .notif-link[data-goto] { cursor: pointer; }
+        .notif-link[data-goto]:hover { background: #f8f9fa; }
+        /* Unread until the next time the bell is opened. */
+        .notif-link.is-new { background: #fffbe6; }
+        .notif-link.is-new[data-goto]:hover { background: #fff6cc; }
         .notif-dismiss-btn { border: none; padding: 6px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
         .notif-dismiss-approved { background-color: #28a745; color: white; }
         .notif-dismiss-rejected { background-color: #dc3545; color: white; }
@@ -457,13 +479,20 @@ $is_live_fetch = isset($_GET['live']);
                 <li><a onclick="showPage('lost')" id="nav-lost">Lost & Found</a></li>
 
                 <li class="notif-bell-wrap">
-                    <span class="notif-bell" id="notif-bell" data-live="notifications" onclick="toggleNotifDropdown(event)">
+                    <span class="notif-bell" id="notif-bell" role="button" tabindex="0" title="Notifications">
                         <i class="fas fa-bell"></i>
-                        <span class="notif-badge" id="notif-badge" style="display:<?php echo $notification_count > 0 ? 'flex' : 'none'; ?>;"><?php echo $notification_count; ?></span>
+                        <!-- Count is computed client-side from what's already been
+                             seen, so it starts hidden and notifications.js fills it. -->
+                        <span class="notif-badge" id="notif-badge" style="display:none;">0</span>
                     </span>
                     <div class="notif-dropdown" id="notif-dropdown">
-                        <div class="notif-dropdown-header">Notifications</div>
-                        <div id="notif-dropdown-body" data-live="notifications">
+                        <div class="notif-dropdown-header">
+                            <span>Notifications</span>
+                            <button type="button" class="notif-markall" id="notif-markall">Mark all read</button>
+                        </div>
+                        <!-- Swapped by live-sync when this user's applications change
+                             or a pet is reunited, so alerts land without a refresh. -->
+                        <div id="notif-dropdown-body" data-live="notifications lost_pets">
                             <?php if ($notification_count > 0): ?>
                                 <?php echo $notifications_html; ?>
                             <?php else: ?>
@@ -851,8 +880,22 @@ $is_live_fetch = isset($_GET['live']);
 
                 <div id="feed-found" data-live="lost_pets" style="display: none;">
                     <?php
-                    $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
-                    
+                    // Reunions stay on the public feed for FOUND_ANNOUNCEMENT_DAYS
+                    // and then drop off on their own - no cleanup job, just a
+                    // filter. The row itself is kept; the admin's Lost & Found
+                    // table still lists it in full.
+                    try {
+                        $found_query = $conn->query(
+                            "SELECT * FROM lost_pets
+                              WHERE status = 'Found' AND is_archived = 0
+                                AND COALESCE(found_at, created_at) > NOW() - INTERVAL '" . FOUND_ANNOUNCEMENT_DAYS . " days'
+                           ORDER BY COALESCE(found_at, created_at) DESC, id DESC"
+                        );
+                    } catch (PDOException $e) {
+                        error_log('Reunited feed: no found_at/created_at yet (run migrate.php?): ' . $e->getMessage());
+                        $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' AND is_archived = 0 ORDER BY id DESC");
+                    }
+
                     if($found_query && $found_query->rowCount() > 0) {
                         while($row = $found_query->fetch(PDO::FETCH_ASSOC)){
                             $map_query = urlencode($row['location'] . " Baguio City");
@@ -1032,20 +1075,22 @@ $is_live_fetch = isset($_GET['live']);
             document.getElementById('nav-links').classList.toggle('active-nav');
         }
 
-        function toggleNotifDropdown(event) {
-            event.stopPropagation();
-            document.getElementById('notif-dropdown').classList.toggle('open');
-        }
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('notif-dropdown');
-            if (dropdown && dropdown.classList.contains('open') && !dropdown.contains(event.target) && !event.target.closest('.notif-bell')) {
-                dropdown.classList.remove('open');
-            }
-        });
+        // Opening, closing, unread tracking and the live refresh all come from
+        // notifications.js - the same module the admin panel uses.
 
         // Pets, lost & found reports, shelter status and the notification bell all
         // refresh themselves through live-sync.js - see the data-live attributes.
         document.addEventListener('DOMContentLoaded', () => {
+            NotificationBell.create({
+                storageKey: 'furfinder_user_notif_seen',
+                bellId: 'notif-bell',
+                badgeId: 'notif-badge',
+                dropdownId: 'notif-dropdown',
+                bodyId: 'notif-dropdown-body',
+                markAllId: 'notif-markall',
+                datasets: ['notifications', 'lost_pets'],
+                onSelect: (link) => showPage(link.dataset.goto)
+            });
             LiveSync.start({ interval: 5000 });
         });
 
