@@ -312,6 +312,36 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         }
         .section.active { display: block; }
         .section h3 { margin-bottom: 18px; color: var(--primary-color); font-size: 1.15rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        .section-note { font-size: 0.875rem; color: #767e89; margin: -6px 0 20px; }
+
+        /* Shared tab bar - same visual language as the Manage Pets toolbar */
+        .tab-bar { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; flex-wrap: wrap; }
+        .tab-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            background: #f8f9fa;
+            color: #4a5568;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            flex: 1;
+            min-width: 130px;
+            transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        .tab-btn:hover { border-color: #bbb; }
+        .tab-btn.active { background: var(--primary-color); color: var(--white); border-color: var(--primary-color); }
+        .tab-btn i { margin-right: 6px; }
+
+        /* Analytics chart cards - match the .card / .section surface treatment */
+        .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 950px; margin: 0 auto; }
+        .chart-card { background: var(--white); padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+        .chart-card h4 { text-align: center; margin-bottom: 15px; color: #4a5568; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+        .chart-card-wide { grid-column: 1 / -1; }
+
+        .table-empty { text-align: center; color: #767e89; padding: 18px 15px; }
+        .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--border-color); display: block; }
+        .row-muted td { color: #767e89; }
 
         .dashboard-stats {
             display: grid;
@@ -348,9 +378,20 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         .data-table th, .data-table td { padding: 11px 15px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         .data-table th { background-color: #f8f9fa; color: #4a5568; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.03em; border-bottom: 1px solid var(--border-color); }
         .data-table tr:hover { background-color: #fafbfc; }
-        .app-status select, .shelter-update select, .shelter-update input { padding: 5px; border-radius: var(--radius); }
+        /* The shelter <form> lives inside a <tr>, so the parser hoists it out of the
+           table - style the cells via the table id, not via the form class. */
+        .app-status select, #shelter-table select, #shelter-table input {
+            padding: 7px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            font-family: inherit;
+            color: var(--text-dark);
+            background: var(--white);
+        }
         .app-status { display: flex; gap: 5px; }
-        .shelter-update input { width: 100px; }
+        #shelter-table input { width: 100%; min-width: 150px; }
+        .shelter-actions { display: flex; gap: 8px; align-items: center; }
 
         .doc-link { color: var(--primary-color); text-decoration: underline; text-underline-offset: 2px; font-size: 0.85rem; display: block; margin-bottom: 3px;}
         .doc-link:hover { color: var(--accent-color); }
@@ -540,7 +581,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                     ?>
                         <tr>
                             <td><?php echo $row['id']; ?></td>
-                            <td><img src="<?php echo htmlspecialchars($row['image_url']); ?>" alt="Pet Photo" style="width: 50px; height: 50px; object-fit: cover;"></td>
+                            <td><img src="<?php echo htmlspecialchars($row['image_url']); ?>" alt="Pet Photo" class="thumb"></td>
                             <td><?php echo htmlspecialchars($row['name']); ?></td>
                             <td><?php echo htmlspecialchars($row['breed']); ?></td>
                             <td><?php echo htmlspecialchars(ucfirst($row['type'])); ?></td>
@@ -573,28 +614,28 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         </div>
 
         <div id="archives" class="section">
-            <h3 style="border-bottom: none; margin-bottom: 10px;">Archives</h3>
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">These records are hidden from the main dashboard but preserved securely for reference.</p>
-            
+            <h3>Archives</h3>
+            <p class="section-note">These records are hidden from the main dashboard but preserved securely for reference.</p>
+
             <!-- TABS UI -->
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
-                <button type="button" id="archive-tab-pets" style="padding: 8px 20px; border: none; background: var(--primary-color); color: white; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchArchiveTab('pets')">
+            <div class="tab-bar">
+                <button type="button" id="archive-tab-pets" class="tab-btn active" onclick="switchArchiveTab('pets')">
                     <i class="fas fa-dog"></i> Pets
                 </button>
-                <button type="button" id="archive-tab-apps" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchArchiveTab('apps')">
+                <button type="button" id="archive-tab-apps" class="tab-btn" onclick="switchArchiveTab('apps')">
                     <i class="fas fa-file-alt"></i> Applications
                 </button>
-                <button type="button" id="archive-tab-lost" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchArchiveTab('lost')">
+                <button type="button" id="archive-tab-lost" class="tab-btn" onclick="switchArchiveTab('lost')">
                     <i class="fas fa-search-location"></i> Lost & Found
                 </button>
             </div>
 
             <!-- ARCHIVED PETS TABLE -->
-            <div id="archive-table-pets" style="display: block; overflow-x: auto;">
+            <div id="archive-table-pets" style="display: block;">
                 <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
-                        <tr style="background-color: var(--primary-color); color: white;">
+                        <tr>
                             <th>ID</th>
                             <th>Name</th>
                             <th>Type</th>
@@ -613,31 +654,30 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 <td><?php echo htmlspecialchars($row['name']); ?></td>
                                 <td><?php echo htmlspecialchars(ucfirst($row['type'])); ?></td>
                                 <td><?php echo htmlspecialchars($row['status']); ?></td>
-                                <td style="display: flex; justify-content: center;">
-                                    <form method="POST" style="margin:0;">
+                                <td style="text-align: center;">
+                                    <form method="POST" style="margin:0; display:inline-block;">
                                         <input type="hidden" name="pet_id" value="<?php echo $row['id']; ?>">
                                         <button type="submit" name="restore_pet" class="btn-save" style="background-color: #17a2b8;"><i class="fas fa-undo"></i> Restore</button>
                                     </form>
                                 </td>
                             </tr>
-                        <?php 
-                            endwhile; 
+                        <?php
+                            endwhile;
                         } else {
-                            echo "<tr><td colspan='5' style='text-align:center;'>No archived pets found.</td></tr>";
+                            echo "<tr><td colspan='5' class='table-empty'>No archived pets found.</td></tr>";
                         }
                         ?>
                     </tbody>
                 </table>
                 </div>
             </div>
-            </div>
 
             <!-- ARCHIVED APPLICATIONS TABLE -->
-            <div id="archive-table-apps" style="display: none; overflow-x: auto;">
+            <div id="archive-table-apps" style="display: none;">
                 <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
-                        <tr style="background-color: var(--primary-color); color: white;">
+                        <tr>
                             <th>Pet Name</th>
                             <th>Applicant</th>
                             <th>Final Status</th>
@@ -654,31 +694,30 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 <td><?php echo htmlspecialchars($row['pet_name']); ?></td>
                                 <td><?php echo htmlspecialchars($row['fullname']); ?></td>
                                 <td><?php echo htmlspecialchars($row['status']); ?></td>
-                                <td style="display: flex; justify-content: center;">
-                                    <form method="POST" style="margin:0;">
+                                <td style="text-align: center;">
+                                    <form method="POST" style="margin:0; display:inline-block;">
                                         <input type="hidden" name="app_id" value="<?php echo $row['id']; ?>">
                                         <button type="submit" name="restore_application" class="btn-save" style="background-color: #17a2b8;"><i class="fas fa-undo"></i> Restore</button>
                                     </form>
                                 </td>
                             </tr>
-                        <?php 
-                            endwhile; 
+                        <?php
+                            endwhile;
                         } else {
-                            echo "<tr><td colspan='4' style='text-align:center;'>No archived applications found.</td></tr>";
+                            echo "<tr><td colspan='4' class='table-empty'>No archived applications found.</td></tr>";
                         }
                         ?>
                     </tbody>
                 </table>
                 </div>
             </div>
-            </div>
 
             <!-- ARCHIVED LOST & FOUND TABLE -->
-            <div id="archive-table-lost" style="display: none; overflow-x: auto;">
+            <div id="archive-table-lost" style="display: none;">
                 <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
-                        <tr style="background-color: var(--primary-color); color: white;">
+                        <tr>
                             <th>Photo</th>
                             <th>Pet Name</th>
                             <th>Location</th>
@@ -693,86 +732,63 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                             while($row = $archived_lost->fetch(PDO::FETCH_ASSOC)):
                         ?>
                             <tr>
-                                <td><img src="<?php echo htmlspecialchars($row['photo_path']); ?>" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.src='https://via.placeholder.com/40'"></td>
+                                <td><img src="<?php echo htmlspecialchars($row['photo_path']); ?>" alt="Lost Pet Photo" class="thumb" onerror="this.src='https://via.placeholder.com/50'"></td>
                                 <td><?php echo htmlspecialchars($row['pet_name']); ?></td>
                                 <td><?php echo htmlspecialchars($row['location']); ?></td>
                                 <td><?php echo htmlspecialchars($row['status']); ?></td>
-                                <td style="display: flex; justify-content: center;">
-                                    <form method="POST" style="margin:0;">
+                                <td style="text-align: center;">
+                                    <form method="POST" style="margin:0; display:inline-block;">
                                         <input type="hidden" name="lost_pet_id" value="<?php echo $row['id']; ?>">
                                         <button type="submit" name="restore_lost_pet" class="btn-save" style="background-color: #17a2b8;"><i class="fas fa-undo"></i> Restore</button>
                                     </form>
                                 </td>
                             </tr>
-                        <?php 
-                            endwhile; 
+                        <?php
+                            endwhile;
                         } else {
-                            echo "<tr><td colspan='5' style='text-align:center;'>No archived lost & found reports.</td></tr>";
+                            echo "<tr><td colspan='5' class='table-empty'>No archived lost &amp; found reports.</td></tr>";
                         }
                         ?>
                     </tbody>
                 </table>
                 </div>
             </div>
-            </div>
 
             <script>
             function switchArchiveTab(tabName) {
-                var btnPets = document.getElementById('archive-tab-pets');
-                var btnApps = document.getElementById('archive-tab-apps');
-                var btnLost = document.getElementById('archive-tab-lost');
-                
-                var tablePets = document.getElementById('archive-table-pets');
-                var tableApps = document.getElementById('archive-table-apps');
-                var tableLost = document.getElementById('archive-table-lost');
-                
-                // Reset all buttons
-                btnPets.style.background = '#e2e6ea'; btnPets.style.color = '#333';
-                btnApps.style.background = '#e2e6ea'; btnApps.style.color = '#333';
-                btnLost.style.background = '#e2e6ea'; btnLost.style.color = '#333';
-                
-                // Hide all tables
-                tablePets.style.display = 'none';
-                tableApps.style.display = 'none';
-                tableLost.style.display = 'none';
-                
-                // Show active tab
-                if (tabName === 'pets') {
-                    btnPets.style.background = 'var(--primary-color)'; btnPets.style.color = 'white';
-                    tablePets.style.display = 'block';
-                } else if (tabName === 'apps') {
-                    btnApps.style.background = 'var(--primary-color)'; btnApps.style.color = 'white';
-                    tableApps.style.display = 'block';
-                } else if (tabName === 'lost') {
-                    btnLost.style.background = 'var(--primary-color)'; btnLost.style.color = 'white';
-                    tableLost.style.display = 'block';
-                }
+                ['pets', 'apps', 'lost'].forEach(function(name) {
+                    var btn = document.getElementById('archive-tab-' + name);
+                    var table = document.getElementById('archive-table-' + name);
+                    var isActive = (name === tabName);
+                    btn.classList.toggle('active', isActive);
+                    table.style.display = isActive ? 'block' : 'none';
+                });
             }
             </script>
         </div>
 
         <div id="analytics" class="section">
             <h3><i class="fas fa-chart-bar"></i> Descriptive Analytics</h3>
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">An overview of current shelter statistics and adoption pipelines.</p>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; max-width: 950px; margin: 0 auto;">
-                <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px;">
-                    <h4 style="text-align:center; margin-bottom:15px; color:#555;">Active Population</h4>
+            <p class="section-note">An overview of current shelter statistics and adoption pipelines.</p>
+
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h4>Active Population</h4>
                     <div style="position: relative; height:250px; max-width:280px; margin:0 auto;">
                         <canvas id="typeChart"></canvas>
                     </div>
                 </div>
 
-                <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px;">
-                    <h4 style="text-align:center; margin-bottom:15px; color:#555;">Top 5 Available Breeds</h4>
+                <div class="chart-card">
+                    <h4>Top 5 Available Breeds</h4>
                     <div style="position: relative; height:250px;">
                         <canvas id="breedChart"></canvas>
                     </div>
                 </div>
 
-                <div style="background: #fff; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; grid-column: 1 / -1;">
-                    <h4 style="text-align:center; margin-bottom:15px; color:#555;">Application Pipeline</h4>
-                    <div style="position: relative; height:250px; max-height: 300px; max-width:280px; margin:0 auto;">
+                <div class="chart-card chart-card-wide">
+                    <h4>Application Pipeline</h4>
+                    <div style="position: relative; height:250px; max-width:280px; margin:0 auto;">
                         <canvas id="appChart"></canvas>
                     </div>
                 </div>
@@ -780,12 +796,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         </div>
 
         <div id="applications" class="section">
-            <h3>Adoption Applications (Requires Document Review)</h3>
-            
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
-                <button type="button" class="app-tab-btn" style="padding: 8px 20px; border: none; background: var(--primary-color); color: white; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="filterApps('pending', this)">Pending Review</button>
-                <button type="button" class="app-tab-btn" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="filterApps('approved', this)">Approved</button>
-                <button type="button" class="app-tab-btn" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="filterApps('rejected', this)">Rejected / Completed</button>
+            <h3>Adoption Applications</h3>
+            <p class="section-note">Review each applicant's submitted documents before approving or rejecting.</p>
+
+            <div class="tab-bar">
+                <button type="button" class="app-tab-btn tab-btn active" onclick="filterApps('pending', this)"><i class="fas fa-hourglass-half"></i> Pending Review</button>
+                <button type="button" class="app-tab-btn tab-btn" onclick="filterApps('approved', this)"><i class="fas fa-check-circle"></i> Approved</button>
+                <button type="button" class="app-tab-btn tab-btn" onclick="filterApps('rejected', this)"><i class="fas fa-times-circle"></i> Rejected / Completed</button>
             </div>
 
             <div class="table-responsive">
@@ -815,12 +832,8 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
 
             function filterApps(status, btn) {
                 currentAppFilter = status;
-                document.querySelectorAll('.app-tab-btn').forEach(b => {
-                    b.style.background = '#e2e6ea';
-                    b.style.color = '#333';
-                });
-                btn.style.background = 'var(--primary-color)';
-                btn.style.color = 'white';
+                document.querySelectorAll('.app-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
 
                 document.querySelectorAll('.app-row').forEach(row => {
                     row.style.display = 'none';
@@ -864,24 +877,25 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         </div>
 
         <div id="lost-found" class="section">
-            <h3 style="color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">User Submitted Lost Pets</h3>
-            
+            <h3>User Submitted Lost Pets</h3>
+            <p class="section-note">Reports submitted by the public. Mark a pet as found once it is reunited, or archive the report.</p>
+
             <!-- TABS UI -->
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
-                <button type="button" id="admin-tab-missing" style="padding: 8px 20px; border: none; background: var(--danger); color: white; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchAdminLostTab('missing')">
+            <div class="tab-bar">
+                <button type="button" id="admin-tab-missing" class="tab-btn active" onclick="switchAdminLostTab('missing')">
                     <i class="fas fa-search"></i> Active Missing Reports
                 </button>
-                <button type="button" id="admin-tab-found" style="padding: 8px 20px; border: none; background: #e2e6ea; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1;" onclick="switchAdminLostTab('found')">
+                <button type="button" id="admin-tab-found" class="tab-btn" onclick="switchAdminLostTab('found')">
                     <i class="fas fa-check-circle"></i> Resolved (Found)
                 </button>
             </div>
 
             <!-- MISSING TABLE -->
-            <div id="admin-table-missing" style="display: block; overflow-x: auto;">
+            <div id="admin-table-missing" style="display: block;">
                 <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
-                        <tr style="background-color: var(--primary-color); color: white;">
+                        <tr>
                             <th>PHOTO</th>
                             <th>PET NAME</th>
                             <th>LOCATION</th>
@@ -898,8 +912,8 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         if($missing && $missing->rowCount() > 0) {
                             while($row = $missing->fetch(PDO::FETCH_ASSOC)) {
                                 echo "<tr>";
-                                echo "<td><img src='{$row['photo_path']}' style='width: 50px; height: 50px; object-fit: cover; border-radius: 4px;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
-                                echo "<td style='font-weight: bold; color: var(--primary-color);'>" . htmlspecialchars($row['pet_name']) . "</td>";
+                                echo "<td><img src='{$row['photo_path']}' alt='Lost Pet Photo' class='thumb' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
+                                echo "<td style='font-weight: 600; color: var(--primary-color);'>" . htmlspecialchars($row['pet_name']) . "</td>";
                                 echo "<td>" . htmlspecialchars($row['location']) . "</td>";
                                 echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 
@@ -920,21 +934,20 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 echo "</tr>";
                             }
                         } else {
-                            echo "<tr><td colspan='6' style='padding: 15px; text-align: center; color: #666;'>No active missing reports.</td></tr>";
+                            echo "<tr><td colspan='6' class='table-empty'>No active missing reports.</td></tr>";
                         }
                         ?>
                     </tbody>
                 </table>
                 </div>
             </div>
-            </div>
 
             <!-- FOUND TABLE -->
-            <div id="admin-table-found" style="display: none; overflow-x: auto;">
+            <div id="admin-table-found" style="display: none;">
                 <div class="table-responsive">
                 <table class="data-table" style="margin-top: 0;">
                     <thead>
-                        <tr style="background-color: var(--success); color: white;">
+                        <tr>
                             <th>PHOTO</th>
                             <th>PET NAME</th>
                             <th>LOCATION</th>
@@ -949,12 +962,12 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         
                         if($found && $found->rowCount() > 0) {
                             while($row = $found->fetch(PDO::FETCH_ASSOC)) {
-                                echo "<tr style='background-color: #f8f9fa;'>";
-                                echo "<td><img src='{$row['photo_path']}' style='width: 50px; height: 50px; object-fit: cover; border-radius: 4px; opacity: 0.7;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
-                                echo "<td style='color: #666;'><del>" . htmlspecialchars($row['pet_name']) . "</del></td>";
-                                echo "<td style='color: #666;'>" . htmlspecialchars($row['location']) . "</td>";
-                                echo "<td style='color: #666;'>" . htmlspecialchars($row['contact_number']) . "</td>";
-                                echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #666;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
+                                echo "<tr class='row-muted'>";
+                                echo "<td><img src='{$row['photo_path']}' alt='Found Pet Photo' class='thumb' style='opacity: 0.7;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
+                                echo "<td><del>" . htmlspecialchars($row['pet_name']) . "</del></td>";
+                                echo "<td>" . htmlspecialchars($row['location']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
+                                echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
                                 
                                 echo "<td>
                                         <div style='display: flex; justify-content: center;'>
@@ -967,47 +980,32 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 echo "</tr>";
                             }
                         } else {
-                            echo "<tr><td colspan='6' style='padding: 15px; text-align: center; color: #666;'>No found pets yet.</td></tr>";
+                            echo "<tr><td colspan='6' class='table-empty'>No found pets yet.</td></tr>";
                         }
                         ?>
                     </tbody>
                 </table>
                 </div>
             </div>
-            </div>
 
             <script>
             function switchAdminLostTab(tabName) {
-                var btnMissing = document.getElementById('admin-tab-missing');
-                var btnFound = document.getElementById('admin-tab-found');
-                var tableMissing = document.getElementById('admin-table-missing');
-                var tableFound = document.getElementById('admin-table-found');
-                
-                if (tabName === 'missing') {
-                    btnMissing.style.background = 'var(--danger)';
-                    btnMissing.style.color = 'white';
-                    btnFound.style.background = '#e2e6ea';
-                    btnFound.style.color = '#333';
-                    
-                    tableMissing.style.display = 'block';
-                    tableFound.style.display = 'none';
-                } else {
-                    btnFound.style.background = 'var(--success)';
-                    btnFound.style.color = 'white';
-                    btnMissing.style.background = '#e2e6ea';
-                    btnMissing.style.color = '#333';
-                    
-                    tableFound.style.display = 'block';
-                    tableMissing.style.display = 'none';
-                }
+                ['missing', 'found'].forEach(function(name) {
+                    var btn = document.getElementById('admin-tab-' + name);
+                    var table = document.getElementById('admin-table-' + name);
+                    var isActive = (name === tabName);
+                    btn.classList.toggle('active', isActive);
+                    table.style.display = isActive ? 'block' : 'none';
+                });
             }
             </script>
         </div>
 
         <div id="shelter-status" class="section">
             <h3>Update Shelter Details</h3>
+            <p class="section-note">Keep each partner shelter's contact details, visiting schedule and capacity status current.</p>
             <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table" id="shelter-table">
                 <thead>
                     <tr>
                         <th>Shelter</th>
@@ -1030,11 +1028,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                                 <td><input type="text" name="schedule" value="<?php echo htmlspecialchars($row['schedule']); ?>" required></td>
                                 <td><?php echo htmlspecialchars($row['status']); ?></td>
                                 <td>
-                                    <select name="status">
-                                        <option value="Open" <?php if($row['status'] == 'Open') echo 'selected'; ?>>Open</option>
-                                        <option value="Full" <?php if($row['status'] == 'Full') echo 'selected'; ?>>Full</option>
-                                    </select>
-                                    <button type="submit" name="update_shelter" class="btn-save">Save</button>
+                                    <div class="shelter-actions">
+                                        <select name="status">
+                                            <option value="Open" <?php if($row['status'] == 'Open') echo 'selected'; ?>>Open</option>
+                                            <option value="Full" <?php if($row['status'] == 'Full') echo 'selected'; ?>>Full</option>
+                                        </select>
+                                        <button type="submit" name="update_shelter" class="btn-save">Save</button>
+                                    </div>
                                 </td>
                             </form>
                         </tr>

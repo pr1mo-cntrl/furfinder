@@ -11,7 +11,7 @@ function renderApplicationRow($row) {
     ob_start();
     ?>
     <tr class="app-row status-<?php echo htmlspecialchars($statusClass); ?>">
-        <td style="font-weight:bold; color:var(--primary-color);"><?php echo htmlspecialchars($row['pet_name']); ?></td>
+        <td style="font-weight:600; color:var(--primary-color);"><?php echo htmlspecialchars($row['pet_name']); ?></td>
         <td>
             <strong><?php echo htmlspecialchars($row['fullname']); ?></strong><br>
             <small><i class="fas fa-phone"></i> <?php echo htmlspecialchars($row['contact']); ?></small><br>
@@ -24,19 +24,19 @@ function renderApplicationRow($row) {
             <?php if(isset($row['barangay_cert']) && $row['barangay_cert']): ?>
                 <a href="<?php echo htmlspecialchars($row['barangay_cert']); ?>" target="_blank" class="doc-link"><i class="fas fa-file-contract"></i> View Brgy Cert</a>
             <?php else: ?>
-                <span style="color:#999; font-size:0.8rem;">No Brgy Cert</span><br>
+                <span style="color:#767e89; font-size:0.8rem;">No Brgy Cert</span><br>
             <?php endif; ?>
 
             <?php if(isset($row['valid_id']) && $row['valid_id']): ?>
                 <a href="<?php echo htmlspecialchars($row['valid_id']); ?>" target="_blank" class="doc-link"><i class="fas fa-id-card"></i> View Valid ID</a>
             <?php else: ?>
-                <span style="color:#999; font-size:0.8rem;">No ID</span><br>
+                <span style="color:#767e89; font-size:0.8rem;">No ID</span><br>
             <?php endif; ?>
 
             <?php if(isset($row['cage_photo']) && $row['cage_photo']): ?>
                 <a href="<?php echo htmlspecialchars($row['cage_photo']); ?>" target="_blank" class="doc-link"><i class="fas fa-home"></i> View Cage/Leash</a>
             <?php else: ?>
-                <span style="color:#999; font-size:0.8rem;">No Cage Photo</span>
+                <span style="color:#767e89; font-size:0.8rem;">No Cage Photo</span>
             <?php endif; ?>
         </td>
         <td>
