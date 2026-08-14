@@ -356,29 +356,6 @@ $is_live_fetch = isset($_GET['live']);
         .faq-item.open p { display: block; animation: slideDown 0.3s ease; }
         @keyframes slideDown { from {opacity:0; transform:translateY(-5px);} to {opacity:1; transform:translateY(0);} }
 
-<<<<<<< HEAD
-        .pet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .pet-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 3px 6px rgba(0,0,0,0.1); transition: var(--transition); position: relative; }
-        .pet-card:hover { transform: translateY(-5px); }
-        .pet-img { height: 200px; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .pet-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-        .pet-card:hover .pet-img img { transform: scale(1.05); }
-        .pet-details { padding: 1.5rem; }
-        
-        .badge-new { position: absolute; top: 10px; right: 10px; background: var(--accent-color); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        
-        .lf-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; }
-        .report-form { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
-        .missing-feed { display: flex; flex-direction: column; gap: 15px; }
-        .missing-card { background: white; padding: 1rem; border-radius: 8px; border-left: 5px solid var(--danger); display: flex; gap: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); align-items: flex-start; }
-        .missing-img-container { width: 100px; height: 100px; background: #eee; border-radius: 8px; flex-shrink: 0; overflow: hidden; }
-        .missing-img-container img { width: 100%; height: 100%; object-fit: cover; }
-        .active-report-card { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
-
-        .shelter-card { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 2rem; display: flex; gap: 2rem; align-items: flex-start; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
-        .shelter-logo img { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid var(--primary-color); padding: 2px; }
-        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; margin-left: 10px; }
-=======
         .pet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
         .pet-card { background: white; border-radius: var(--radius); border: 1px solid var(--border-color); overflow: hidden; box-shadow: var(--shadow-sm); transition: var(--transition); position: relative; }
         .pet-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
@@ -406,7 +383,6 @@ $is_live_fetch = isset($_GET['live']);
         .shelter-card { background: white; border-radius: var(--radius); border: 1px solid var(--border-color); padding: 1.75rem; margin-bottom: 1.5rem; display: flex; gap: 1.75rem; align-items: flex-start; box-shadow: var(--shadow-sm); }
         .shelter-logo img { width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 3px solid var(--primary-color); padding: 2px; }
         .status-badge { display: inline-block; padding: 3px 12px; border-radius: var(--radius); font-weight: 700; font-size: 0.78rem; margin-left: 10px; }
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         .status-open { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .status-full { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
@@ -419,8 +395,6 @@ $is_live_fetch = isset($_GET['live']);
         .btn-secondary { background-color: #eef0f2; color: #333; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: var(--radius); cursor: pointer; margin-left: 5px; font-size: 0.85rem; font-weight: 600; }
         .btn-secondary:hover { background-color: #e2e6ea; }
 
-<<<<<<< HEAD
-=======
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(15,23,32,0.55); align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .modal-content { background-color: #fefefe; padding: 1.75rem; border-radius: var(--radius); border: 1px solid var(--border-color); width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: var(--shadow-md); animation: fadeIn 0.25s; }
         .close-modal { float: right; font-size: 26px; cursor: pointer; color: #aaa; position: absolute; right: 18px; top: 12px; line-height: 1; }
@@ -436,7 +410,6 @@ $is_live_fetch = isset($_GET['live']);
         #app-toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px); background: var(--primary-color); color: white; padding: 12px 22px; border-radius: var(--radius); box-shadow: var(--shadow-md); font-size: 0.9rem; font-weight: 500; z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
         #app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             nav { padding: 1rem; }
@@ -471,8 +444,6 @@ $is_live_fetch = isset($_GET['live']);
             
             form[method="GET"] { flex-direction: column; }
             form[method="GET"] input, form[method="GET"] select, form[method="GET"] button { width: 100%; }
-<<<<<<< HEAD
-=======
         }
 
         @media (max-width: 480px) {
@@ -484,7 +455,6 @@ $is_live_fetch = isset($_GET['live']);
             .modal-content { padding: 1.25rem; width: 94%; }
             .pet-details { padding: 1rem; }
             .notif-dropdown { width: 260px; }
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         }
     </style>
 </head>
@@ -507,9 +477,6 @@ $is_live_fetch = isset($_GET['live']);
             <?php if(isset($_SESSION['user_id'])): ?>
                 <li><a onclick="showPage('adopt')" id="nav-adopt">Adopt</a></li>
                 <li><a onclick="showPage('lost')" id="nav-lost">Lost & Found</a></li>
-<<<<<<< HEAD
-                
-=======
 
                 <li class="notif-bell-wrap">
                     <span class="notif-bell" id="notif-bell" role="button" tabindex="0" title="Notifications">
@@ -535,7 +502,6 @@ $is_live_fetch = isset($_GET['live']);
                     </div>
                 </li>
 
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                 <li style="color:var(--accent-color); margin:10px 0;">Hi, <?php echo htmlspecialchars(isset($_SESSION['name']) ? $_SESSION['name'] : 'User'); ?></li>
                 <li><a href="logout.php" class="auth-btn">Logout</a></li>
             <?php else: ?>
@@ -591,16 +557,12 @@ $is_live_fetch = isset($_GET['live']);
                 </a>
             </div>
             <?php endif; ?>
-<<<<<<< HEAD
-            
-=======
 
         </div>
 
         <div class="mission-band">
             <h2>Our Mission</h2>
             <p>We believe every stray and shelter animal in Baguio deserves a second chance. FurFinder connects rescued dogs and cats with loving adopters, and helps reunite lost pets with the families searching for them.</p>
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         </div>
 
         <div class="content-box">
