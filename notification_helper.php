@@ -48,7 +48,7 @@ function fetchApplicationNotifications($conn, $user_id) {
 // have no found_at, so created_at stands in - which after the migration is the
 // migration timestamp, giving them one final window rather than vanishing.
 function fetchFoundNotifications($conn) {
-    $sql = "SELECT id, pet_name, location, COALESCE(found_at, created_at) AS ts
+    $sql = "SELECT id, pet_name, location, user_id, COALESCE(found_at, created_at) AS ts
               FROM lost_pets
              WHERE status = 'Found' AND is_archived = 0
                AND COALESCE(found_at, created_at) > NOW() - INTERVAL '" . FOUND_ANNOUNCEMENT_DAYS . " days'
@@ -57,8 +57,24 @@ function fetchFoundNotifications($conn) {
         $res = $conn->query($sql);
         return $res ? $res->fetchAll(PDO::FETCH_ASSOC) : [];
     } catch (PDOException $e) {
-        error_log('Notifications: found-pet announcements unavailable (run migrate.php?): ' . $e->getMessage());
-        return [];
+        // Before migrate.php there are no timestamps to expire on - but the
+        // announcement itself matters more than the 3-day window, so fall back
+        // to the most recent reunions by id rather than showing nothing. Unread
+        // tracking is per-id, so each one is still only announced once.
+        error_log('Notifications: no found_at/created_at yet, announcing by id (run migrate.php?): ' . $e->getMessage());
+        try {
+            $res = $conn->query(
+                "SELECT id, pet_name, location, user_id, NULL AS ts
+                   FROM lost_pets
+                  WHERE status = 'Found' AND is_archived = 0
+               ORDER BY id DESC
+                  LIMIT 5"
+            );
+            return $res ? $res->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (PDOException $inner) {
+            error_log('Notifications: found-pet announcements unavailable: ' . $inner->getMessage());
+            return [];
+        }
     }
 }
 
@@ -82,6 +98,8 @@ function buildUserNotifications($conn, $user_id) {
             'status'  => 'Found',
             'subject' => $row['pet_name'],
             'meta'    => $row['location'],
+            // The person who filed the report gets it phrased as their own news.
+            'mine'    => isset($row['user_id']) && (string)$row['user_id'] === (string)$user_id,
             'ts'      => $row['ts'],
         ];
     }
@@ -110,11 +128,17 @@ function renderUserNotification($item) {
     if ($item['kind'] === 'found_pet') {
         $meta = htmlspecialchars($item['meta']);
         if ($ago !== '') $meta .= ' &middot; ' . htmlspecialchars($ago);
+        $pet_name = htmlspecialchars($item['subject']);
+
+        $message = !empty($item['mine'])
+            ? 'Great news! Your reported pet <strong>' . $pet_name . '</strong> has been marked as found.'
+            : '<strong>' . $pet_name . '</strong> has been found and reunited with their owner!';
+
         return '
         <div class="notif-link" data-kind="found_pet" data-id="' . $id . '" data-goto="lost">
             <i class="fas fa-heart" style="color: var(--success);"></i>
             <span>
-                <strong>' . htmlspecialchars($item['subject']) . '</strong> has been found and reunited!
+                ' . $message . '
                 <span class="notif-meta">' . $meta . '</span>
             </span>
         </div>';
