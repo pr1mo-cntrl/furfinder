@@ -199,7 +199,11 @@ if ($total_raised_query) {
 }
 
 $progress_percent = ($total_raised / $fundraiser_target) * 100;
-if ($progress_percent > 100) $progress_percent = 100; 
+if ($progress_percent > 100) $progress_percent = 100;
+
+// A background live-sync render must not consume one-shot flash messages that
+// were queued for the user's next real page load.
+$is_live_fetch = isset($_GET['live']);
 ?>
 
 <!DOCTYPE html>
@@ -210,7 +214,8 @@ if ($progress_percent > 100) $progress_percent = 100;
     <title>FurFinder | Baguio City</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    
+    <script src="live-sync.js" defer></script>
+
     <style>
         :root {
             --primary-color: #003366;
@@ -452,13 +457,13 @@ if ($progress_percent > 100) $progress_percent = 100;
                 <li><a onclick="showPage('lost')" id="nav-lost">Lost & Found</a></li>
 
                 <li class="notif-bell-wrap">
-                    <span class="notif-bell" onclick="toggleNotifDropdown(event)">
+                    <span class="notif-bell" id="notif-bell" data-live="notifications" onclick="toggleNotifDropdown(event)">
                         <i class="fas fa-bell"></i>
                         <span class="notif-badge" id="notif-badge" style="display:<?php echo $notification_count > 0 ? 'flex' : 'none'; ?>;"><?php echo $notification_count; ?></span>
                     </span>
                     <div class="notif-dropdown" id="notif-dropdown">
                         <div class="notif-dropdown-header">Notifications</div>
-                        <div id="notif-dropdown-body">
+                        <div id="notif-dropdown-body" data-live="notifications">
                             <?php if ($notification_count > 0): ?>
                                 <?php echo $notifications_html; ?>
                             <?php else: ?>
@@ -476,7 +481,7 @@ if ($progress_percent > 100) $progress_percent = 100;
         </ul>
     </nav>
 
-    <?php if(isset($_SESSION['flash_msg']) || isset($_SESSION['flash_error'])):
+    <?php if((isset($_SESSION['flash_msg']) || isset($_SESSION['flash_error'])) && !$is_live_fetch):
         $is_error = isset($_SESSION['flash_error']);
         $flash_text = $is_error ? $_SESSION['flash_error'] : $_SESSION['flash_msg'];
         $flash_bg = $is_error ? 'var(--danger)' : 'var(--success)';
@@ -584,7 +589,7 @@ if ($progress_percent > 100) $progress_percent = 100;
     $cvao_res = $conn->query("SELECT status FROM shelters WHERE name LIKE '%Baguio%' LIMIT 1");
     if($cvao_res && $r = $cvao_res->fetch(PDO::FETCH_ASSOC)) $cvao_status = $r['status'];
     ?>
-    <div class="shelter-card">
+    <div class="shelter-card" id="shelter-card" data-live="shelters">
         <div class="shelter-logo"><img src="uploads/shelter_cvao.jpg" onerror="this.src='https://via.placeholder.com/100?text=Logo'"></div>
         <div class="shelter-info">
             <h3>Baguio City Vet Office <span class="status-badge <?php echo ($cvao_status=='Open')?'status-open':'status-full'; ?>"><?php echo $cvao_status; ?></span></h3>
@@ -662,7 +667,7 @@ if ($progress_percent > 100) $progress_percent = 100;
             </form>
         </div>
 
-        <div class="pet-grid">
+        <div class="pet-grid" id="pet-grid" data-live="pets">
             <?php
             $sql = "SELECT * FROM pets WHERE status='available' AND is_archived = 0";
             $params = []; // Array to hold our secure PDO parameters
@@ -733,7 +738,7 @@ if ($progress_percent > 100) $progress_percent = 100;
         <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; border-top: 4px solid var(--primary-color);">
             <h3 style="margin-bottom: 15px; color: var(--primary-color);"><i class="fas fa-clipboard-list"></i> My Active Reports</h3>
             
-            <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 15px;" id="my-reports" data-live="lost_pets">
                 <?php
                 $my_uid = $_SESSION['user_id'];
                 $my_reports = $conn->query("SELECT * FROM lost_pets WHERE user_id = '$my_uid' AND status = 'Missing'");
@@ -804,7 +809,7 @@ if ($progress_percent > 100) $progress_percent = 100;
                     </button>
                 </div>
 
-                <div id="feed-missing" style="display: block;">
+                <div id="feed-missing" data-live="lost_pets" style="display: block;">
                     <?php
                     $missing_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' ORDER BY id DESC");
                     
@@ -844,7 +849,7 @@ if ($progress_percent > 100) $progress_percent = 100;
                     ?>
                 </div>
 
-                <div id="feed-found" style="display: none;">
+                <div id="feed-found" data-live="lost_pets" style="display: none;">
                     <?php
                     $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
                     
@@ -1038,25 +1043,11 @@ if ($progress_percent > 100) $progress_percent = 100;
             }
         });
 
-        <?php if (isset($_SESSION['user_id'])): ?>
-        function pollNotifications() {
-            fetch('notifications.php', { credentials: 'same-origin' })
-                .then(res => res.ok ? res.json() : Promise.reject(res.status))
-                .then(data => {
-                    const badge = document.getElementById('notif-badge');
-                    const body = document.getElementById('notif-dropdown-body');
-                    if (!badge || !body) return;
-
-                    badge.textContent = data.count;
-                    badge.style.display = data.count > 0 ? 'flex' : 'none';
-                    body.innerHTML = data.count > 0
-                        ? data.html
-                        : '<div class="notif-empty">You\'re all caught up — no notifications.</div>';
-                })
-                .catch(() => { /* silent - next poll will retry */ });
-        }
-        setInterval(pollNotifications, 5000);
-        <?php endif; ?>
+        // Pets, lost & found reports, shelter status and the notification bell all
+        // refresh themselves through live-sync.js - see the data-live attributes.
+        document.addEventListener('DOMContentLoaded', () => {
+            LiveSync.start({ interval: 5000 });
+        });
 
         function toggleFaq(element) {
             element.classList.toggle('open');

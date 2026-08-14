@@ -1,6 +1,5 @@
 <?php
-// Shared by index.php (initial page render) and notifications.php (AJAX polling)
-// so both build the exact same notification markup from one place.
+// Builds the notification markup rendered into index.php.
 function buildUserNotifications($conn, $user_id) {
     $html = '';
     $count = 0;

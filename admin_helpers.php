@@ -1,6 +1,7 @@
 <?php
-// Shared by admin.php (initial page render) and admin_applications_fetch.php
-// (AJAX polling) so both build the exact same table row markup from one place.
+// Shared renderer for one application row, used by admin.php. live-sync.js
+// re-fetches the page and swaps the tbody, so this stays the single source of
+// truth for the markup.
 function renderApplicationRow($row) {
     $safeData = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
 

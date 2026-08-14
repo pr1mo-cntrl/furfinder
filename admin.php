@@ -233,6 +233,18 @@ if ($breed_res) {
 $app_pending = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Pending%' AND is_archived=0")->fetchColumn() ?: 0;
 $app_approved = $conn->query("SELECT COUNT(*) FROM applications WHERE status LIKE 'Approved%' AND is_archived=0")->fetchColumn() ?: 0;
 $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LIKE 'Rejected%' OR status='Acknowledged') AND is_archived=0")->fetchColumn() ?: 0;
+
+// Emitted as a JSON island the charts read from, so live-sync can swap the
+// numbers in the same way it swaps a table body.
+$analytics_payload = [
+    'types'    => ['dogs' => (int)$dog_count, 'cats' => (int)$cat_count],
+    'breeds'   => ['labels' => $breed_labels, 'counts' => array_map('intval', $breed_counts)],
+    'pipeline' => ['pending' => (int)$app_pending, 'approved' => (int)$app_approved, 'rejected' => (int)$app_rejected],
+];
+
+// A background live-sync render must not consume one-shot flash messages that
+// were queued for the user's next real page load.
+$is_live_fetch = isset($_GET['live']);
 ?>
 
 <!DOCTYPE html>
@@ -243,6 +255,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
     <title>Admin Panel | FurFinder</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="live-sync.js" defer></script>
     <style>
         :root {
             --primary-color: #003366;
@@ -467,7 +480,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
 </head>
 <body>
 
-    <?php if(isset($_SESSION['admin_flash'])):
+    <?php if(isset($_SESSION['admin_flash']) && !$is_live_fetch):
         $admin_flash_is_error = (isset($_SESSION['admin_flash_type']) && $_SESSION['admin_flash_type'] === 'error');
         $admin_flash_bg = $admin_flash_is_error ? 'var(--danger)' : 'var(--success)';
         $admin_flash_icon = $admin_flash_is_error ? 'fa-circle-exclamation' : 'fa-check-circle';
@@ -488,12 +501,12 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
     <div class="sidebar">
         <h2>Admin Panel</h2>
         <ul>
-            <li><a href="#" onclick="showSection('manage-pets', this)" class="active"><i class="fas fa-dog"></i> Manage Pets</a></li>
-            <li><a href="#" onclick="showSection('analytics', this)"><i class="fas fa-chart-line"></i> Analytics & Prediction</a></li> 
-            <li><a href="#" onclick="showSection('applications', this)"><i class="fas fa-file-alt"></i> Applications</a></li>
-            <li><a href="#" onclick="showSection('lost-found', this)"><i class="fas fa-search-location"></i> Lost & Found</a></li>
-            <li><a href="#" onclick="showSection('shelter-status', this)"><i class="fas fa-home"></i> Shelter Status</a></li>
-            <li><a href="#" onclick="showSection('archives', this)"><i class="fas fa-archive"></i> Archives</a></li>
+            <li><a href="#manage-pets" data-section="manage-pets" class="active"><i class="fas fa-dog"></i> Manage Pets</a></li>
+            <li><a href="#analytics" data-section="analytics"><i class="fas fa-chart-line"></i> Analytics &amp; Prediction</a></li>
+            <li><a href="#applications" data-section="applications"><i class="fas fa-file-alt"></i> Applications</a></li>
+            <li><a href="#lost-found" data-section="lost-found"><i class="fas fa-search-location"></i> Lost &amp; Found</a></li>
+            <li><a href="#shelter-status" data-section="shelter-status"><i class="fas fa-home"></i> Shelter Status</a></li>
+            <li><a href="#archives" data-section="archives"><i class="fas fa-archive"></i> Archives</a></li>
         </ul>
         <div class="logout">
             <ul><li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li></ul>
@@ -503,7 +516,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
     <div class="content">
         <h1>Welcome, Admin!</h1>
 
-        <div class="dashboard-stats">
+        <div class="dashboard-stats" id="dashboard-stats" data-live="pets lost_pets applications">
             <div class="card" style="border-left-color: var(--primary-color);">
                 <h3>Total Pets</h3>
                 <p id="stat-total-pets" style="color: var(--primary-color);">
@@ -574,7 +587,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="pets-tbody" data-live="pets">
                     <?php
                     $pets = $conn->query("SELECT * FROM pets WHERE is_archived = 0 ORDER BY id DESC");
                     while($row = $pets->fetch(PDO::FETCH_ASSOC)):
@@ -643,7 +656,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                             <th style="text-align: center;">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="archive-pets-tbody" data-live="pets">
                         <?php
                         $archived_pets = $conn->query("SELECT * FROM pets WHERE is_archived = 1 ORDER BY id DESC");
                         if ($archived_pets && $archived_pets->rowCount() > 0) {
@@ -684,7 +697,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                             <th style="text-align: center;">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="archive-apps-tbody" data-live="applications">
                         <?php
                         $archived_apps = $conn->query("SELECT * FROM applications WHERE is_archived = 1 ORDER BY id DESC");
                         if ($archived_apps && $archived_apps->rowCount() > 0) {
@@ -725,7 +738,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                             <th style="text-align: center;">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="archive-lost-tbody" data-live="lost_pets">
                         <?php
                         $archived_lost = $conn->query("SELECT * FROM lost_pets WHERE is_archived = 1 ORDER BY id DESC");
                         if ($archived_lost && $archived_lost->rowCount() > 0) {
@@ -770,6 +783,13 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
         <div id="analytics" class="section">
             <h3><i class="fas fa-chart-bar"></i> Descriptive Analytics</h3>
             <p class="section-note">An overview of current shelter statistics and adoption pipelines.</p>
+
+            <!-- The charts read their numbers from here, so live-sync can refresh
+                 them by swapping this island like any other data-live region.
+                 JSON_HEX_TAG keeps a breed name containing "</script>" inert. -->
+            <script type="application/json" id="analytics-data" data-live="pets applications"><?php
+                echo json_encode($analytics_payload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            ?></script>
 
             <div class="chart-grid">
                 <div class="chart-card">
@@ -816,7 +836,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody id="applications-tbody">
+                <tbody id="applications-tbody" data-live="applications">
                     <?php
                     $apps = $conn->query("SELECT * FROM applications WHERE is_archived = 0 ORDER BY id DESC");
                     while($row = $apps->fetch(PDO::FETCH_ASSOC)):
@@ -856,18 +876,8 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 });
             }
 
-            function pollApplications() {
-                fetch('admin_applications_fetch.php', { credentials: 'same-origin' })
-                    .then(res => res.ok ? res.json() : Promise.reject(res.status))
-                    .then(data => {
-                        const tbody = document.getElementById('applications-tbody');
-                        if (!tbody) return;
-                        tbody.innerHTML = data.html;
-                        applyCurrentAppFilter();
-                    })
-                    .catch(() => { /* silent - next poll will retry */ });
-            }
-            setInterval(pollApplications, 5000);
+            // Rows arriving from live-sync are re-filtered via the live:updated
+            // listener further down; no dedicated poll needed here.
 
             document.addEventListener('DOMContentLoaded', () => {
                 const pendingBtn = document.querySelector('.app-tab-btn');
@@ -904,9 +914,8 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                             <th style="text-align: center;">ACTION</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="lost-missing-tbody" data-live="lost_pets">
                         <?php
-                        // THIS IS THE LINE THAT WAS MISSING
                         $missing = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' AND is_archived = 0 ORDER BY id DESC");
                         
                         if($missing && $missing->rowCount() > 0) {
@@ -956,7 +965,7 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                             <th style="text-align: center;">ACTION</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="lost-found-tbody" data-live="lost_pets">
                         <?php
                         $found = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' AND is_archived = 0 ORDER BY id DESC");
                         
@@ -1188,7 +1197,20 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             }
         }
 
+        // The open section is remembered so a refresh - including the redirect
+        // after every admin POST - lands back where you were instead of
+        // snapping to Manage Pets.
+        const ADMIN_SECTION_KEY = 'furfinder_admin_section';
+        const DEFAULT_SECTION = 'manage-pets';
+
+        function isSectionId(id) {
+            const el = id ? document.getElementById(id) : null;
+            return !!(el && el.classList.contains('section'));
+        }
+
         function showSection(sectionId, element) {
+            if (!isSectionId(sectionId)) return;
+
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
             });
@@ -1196,23 +1218,45 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
                 link.classList.remove('active');
             });
             document.getElementById(sectionId).classList.add('active');
-            element.classList.add('active');
+
+            const link = element || document.querySelector('.sidebar a[data-section="' + sectionId + '"]');
+            if (link) link.classList.add('active');
+
+            // Private-mode browsers can throw on localStorage writes.
+            try { localStorage.setItem(ADMIN_SECTION_KEY, sectionId); } catch (e) { /* not fatal */ }
         }
 
-        function pollAdminStats() {
-            fetch('admin_stats.php', { credentials: 'same-origin' })
-                .then(res => res.ok ? res.json() : Promise.reject(res.status))
-                .then(data => {
-                    const totalPets = document.getElementById('stat-total-pets');
-                    const pendingApps = document.getElementById('stat-pending-apps');
-                    const lostReports = document.getElementById('stat-lost-reports');
-                    if (totalPets) totalPets.textContent = data.total_pets;
-                    if (pendingApps) pendingApps.textContent = data.pending_applications;
-                    if (lostReports) lostReports.textContent = data.lost_reports;
-                })
-                .catch(() => { /* silent - next poll will retry */ });
+        function restoreSection() {
+            // The URL hash wins so a bookmarked or shared link opens its section;
+            // localStorage covers the POST-redirect case, which drops the hash.
+            let target = decodeURIComponent(location.hash.replace(/^#/, ''));
+            if (!isSectionId(target)) {
+                try { target = localStorage.getItem(ADMIN_SECTION_KEY) || ''; } catch (e) { target = ''; }
+            }
+            if (!isSectionId(target)) target = DEFAULT_SECTION;
+            showSection(target);
         }
-        setInterval(pollAdminStats, 5000);
+
+        document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const sectionId = this.dataset.section;
+                showSection(sectionId, this);
+                // replaceState, not a hash assignment: the URL should reflect the
+                // open section without stacking a history entry per sidebar click.
+                if (window.history && history.replaceState) {
+                    history.replaceState(null, '', '#' + sectionId);
+                } else {
+                    location.hash = sectionId;
+                }
+            });
+        });
+
+        window.addEventListener('hashchange', restoreSection);
+
+        // Run immediately (this script is at the end of <body>) rather than on
+        // DOMContentLoaded, so the correct section is up before the first paint.
+        restoreSection();
 
         function openEditModal(id, name, breed, age, backstory, medical) {
             document.getElementById('edit_pet_id').value = id;
@@ -1245,62 +1289,110 @@ $app_rejected = $conn->query("SELECT COUNT(*) FROM applications WHERE (status LI
             document.getElementById('appDetailsModal').style.display = 'flex';
         }
 
+        let typeChart = null, breedChart = null, appChart = null;
+
+        function readAnalytics() {
+            const island = document.getElementById('analytics-data');
+            if (!island) return null;
+            try {
+                return JSON.parse(island.textContent);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function buildCharts() {
+            const data = readAnalytics();
+            if (!data) return;
+
+            const typeChartEl = document.getElementById('typeChart');
+            if (typeChartEl) {
+                typeChart = new Chart(typeChartEl.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Dogs', 'Cats'],
+                        datasets: [{
+                            data: [data.types.dogs, data.types.cats],
+                            backgroundColor: ['#003366', '#d4af37'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            const breedChartEl = document.getElementById('breedChart');
+            if (breedChartEl) {
+                breedChart = new Chart(breedChartEl.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.breeds.labels,
+                        datasets: [{
+                            label: 'Number Available',
+                            data: data.breeds.counts,
+                            backgroundColor: '#17a2b8',
+                            borderRadius: 4,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    }
+                });
+            }
+
+            const appChartEl = document.getElementById('appChart');
+            if (appChartEl) {
+                appChart = new Chart(appChartEl.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: ['Pending', 'Approved', 'Rejected'],
+                        datasets: [{
+                            data: [data.pipeline.pending, data.pipeline.approved, data.pipeline.rejected],
+                            backgroundColor: ['#ffc107', '#28a745', '#dc3545'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        // Charts are canvas-backed, so live-sync can't swap them the way it swaps
+        // a table body - it refreshes the JSON island and we push the new numbers
+        // into the existing Chart instances instead of rebuilding them.
+        function refreshCharts() {
+            const data = readAnalytics();
+            if (!data) return;
+
+            if (typeChart) {
+                typeChart.data.datasets[0].data = [data.types.dogs, data.types.cats];
+                typeChart.update();
+            }
+            if (breedChart) {
+                breedChart.data.labels = data.breeds.labels;
+                breedChart.data.datasets[0].data = data.breeds.counts;
+                breedChart.update();
+            }
+            if (appChart) {
+                appChart.data.datasets[0].data = [data.pipeline.pending, data.pipeline.approved, data.pipeline.rejected];
+                appChart.update();
+            }
+        }
+
+        document.addEventListener('live:updated', (e) => {
+            const changed = e.detail.datasets;
+            // The applications table is filtered client-side by the active tab,
+            // and the freshly swapped rows arrive unfiltered.
+            if (changed.includes('applications')) applyCurrentAppFilter();
+            // Both datasets feed the analytics island.
+            if (changed.includes('pets') || changed.includes('applications')) refreshCharts();
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
-             const managePetsSection = document.getElementById('manage-pets');
-             if(managePetsSection) managePetsSection.classList.add('active');
-
-             const typeChartEl = document.getElementById('typeChart');
-             if (typeChartEl) {
-                 new Chart(typeChartEl.getContext('2d'), {
-                     type: 'doughnut',
-                     data: {
-                         labels: ['Dogs', 'Cats'],
-                         datasets: [{
-                             data: [<?php echo $dog_count; ?>, <?php echo $cat_count; ?>],
-                             backgroundColor: ['#003366', '#d4af37'],
-                             borderWidth: 1
-                         }]
-                     },
-                     options: { responsive: true, maintainAspectRatio: false }
-                 });
-             }
-
-             const breedChartEl = document.getElementById('breedChart');
-             if (breedChartEl) {
-                 new Chart(breedChartEl.getContext('2d'), {
-                     type: 'bar',
-                     data: {
-                         labels: <?php echo json_encode($breed_labels); ?>,
-                         datasets: [{
-                             label: 'Number Available',
-                             data: <?php echo json_encode($breed_counts); ?>,
-                             backgroundColor: '#17a2b8',
-                             borderRadius: 4,
-                         }]
-                     },
-                     options: { 
-                         responsive: true, 
-                         maintainAspectRatio: false,
-                         scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-                     }
-                 });
-             }
-
-             const appChartEl = document.getElementById('appChart');
-             if (appChartEl) {
-                 new Chart(appChartEl.getContext('2d'), {
-                     type: 'pie',
-                     data: {
-                         labels: ['Pending', 'Approved', 'Rejected'],
-                         datasets: [{
-                             data: [<?php echo $app_pending; ?>, <?php echo $app_approved; ?>, <?php echo $app_rejected; ?>],
-                             backgroundColor: ['#ffc107', '#28a745', '#dc3545'],
-                             borderWidth: 1
-                         }]
-                     },
-                     options: { responsive: true, maintainAspectRatio: false }
-                 });
-             }
+            buildCharts();
+            LiveSync.start({ interval: 5000 });
         });
     </script>
 </body>
