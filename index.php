@@ -1,5 +1,15 @@
 <?php
 include 'db.php';
+include 'notification_helper.php';
+
+// If an uploaded file exceeds post_max_size, PHP silently empties $_POST and
+// $_FILES entirely - without this check, the page just reloads with no
+// feedback and it looks like the form submission vanished.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+    $_SESSION['flash_error'] = "Your upload was too large for the server to accept. Please use a smaller photo (under 12MB) and try again.";
+    header("Location: index.php");
+    exit();
+}
 
 // --- TAB LOGIC ---
 $activeTab = 'home'; 
@@ -10,14 +20,43 @@ if (isset($_POST['submit_application'])) { $activeTab = 'adopt'; }
 if (isset($_POST['submit_donation'])) { $activeTab = 'donate'; }
 if (isset($_GET['search']) || isset($_GET['type_filter'])) { $activeTab = 'adopt'; }
 
+// --- APPLICATION STATUS NOTIFICATIONS ---
+if (isset($_POST['dismiss_notification'])) {
+    $app_id_to_dismiss = $_POST['app_id'];
+
+    $result = $conn->query("SELECT status FROM applications WHERE id = '$app_id_to_dismiss'");
+    if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
+        $new_status = $row['status'] . '_Seen';
+        $conn->query("UPDATE applications SET status = '$new_status' WHERE id = '$app_id_to_dismiss'");
+    }
+
+    header("Location: index.php");
+    exit();
+}
+
+$notifications_html = '';
+$notification_count = 0;
+
+if (isset($_SESSION['user_id'])) {
+    list($notifications_html, $notification_count) = buildUserNotifications($conn, $_SESSION['user_id']);
+}
+
 // --- HANDLE USER MARKING PET AS FOUND ---
 if (isset($_POST['mark_as_found'])) {
     $report_id = $_POST['report_id'];
     $current_user = $_SESSION['user_id'];
     
-    $update_query = "UPDATE lost_pets SET status = 'Found' WHERE id = ? AND user_id = ?";
-    $stmt = $conn->prepare($update_query);
-    if ($stmt->execute([$report_id, $current_user])) {
+    // found_at drives the announcement in everyone's bell and the 3-day window
+    // the resolved post stays on the public feed.
+    try {
+        $stmt = $conn->prepare("UPDATE lost_pets SET status = 'Found', found_at = NOW() WHERE id = ? AND user_id = ?");
+        $ok = $stmt->execute([$report_id, $current_user]);
+    } catch (PDOException $e) {
+        error_log('mark_as_found: no found_at column yet (run migrate.php?): ' . $e->getMessage());
+        $stmt = $conn->prepare("UPDATE lost_pets SET status = 'Found' WHERE id = ? AND user_id = ?");
+        $ok = $stmt->execute([$report_id, $current_user]);
+    }
+    if ($ok) {
         $_SESSION['flash_msg'] = "Great news! Your pet has been marked as Found.";
         header("Location: index.php?tab=lost");
         exit();
@@ -85,9 +124,19 @@ if (isset($_POST['submit_lost_report'])) {
             header("Location: index.php?tab=lost");
             exit();
         } else {
-            $error_details = json_encode($response);
-            echo "<script>alert('Supabase Error! Code: " . $http_code . " | Details: ' + " . $error_details . ");</script>";
+            error_log("Supabase upload failed (HTTP $http_code): $response");
+            $_SESSION['flash_error'] = "We couldn't upload your photo right now. Please try again in a moment.";
+            header("Location: index.php?tab=lost");
+            exit();
         }
+    } else {
+        $upload_error = isset($_FILES["lf_photo"]) ? $_FILES["lf_photo"]["error"] : UPLOAD_ERR_NO_FILE;
+        error_log("Lost pet report blocked, photo upload error code: $upload_error");
+        $_SESSION['flash_error'] = ($upload_error == UPLOAD_ERR_INI_SIZE || $upload_error == UPLOAD_ERR_FORM_SIZE)
+            ? "That photo is too large. Please use an image under 12MB."
+            : "We couldn't read your photo upload. Please choose the photo again and resubmit.";
+        header("Location: index.php?tab=lost");
+        exit();
     }
 }
 
@@ -158,7 +207,11 @@ if ($total_raised_query) {
 }
 
 $progress_percent = ($total_raised / $fundraiser_target) * 100;
-if ($progress_percent > 100) $progress_percent = 100; 
+if ($progress_percent > 100) $progress_percent = 100;
+
+// A background live-sync render must not consume one-shot flash messages that
+// were queued for the user's next real page load.
+$is_live_fetch = isset($_GET['live']);
 ?>
 
 <!DOCTYPE html>
@@ -169,20 +222,26 @@ if ($progress_percent > 100) $progress_percent = 100;
     <title>FurFinder | Baguio City</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    
+    <script src="live-sync.js" defer></script>
+    <script src="notifications.js" defer></script>
+
     <style>
         :root {
-            --primary-color: #003366; 
-            --accent-color: #d4af37; 
+            --primary-color: #003366;
+            --accent-color: #d4af37;
             --bg-light: #f4f7f6;
             --text-dark: #333;
             --white: #ffffff;
             --success: #28a745;
             --danger: #dc3545;
             --transition: all 0.3s ease;
+            --border-color: #e2e5e9;
+            --radius: 6px;
+            --shadow-sm: 0 1px 2px rgba(16,24,40,0.06);
+            --shadow-md: 0 1px 3px rgba(16,24,40,0.08), 0 6px 16px rgba(16,24,40,0.06);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Open Sans', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Open Sans', 'Segoe UI', sans-serif; }
         body { background-color: var(--bg-light); color: var(--text-dark); line-height: 1.6; padding-bottom: 50px; overflow-x: hidden; }
 
         #loader {
@@ -196,29 +255,96 @@ if ($progress_percent > 100) $progress_percent = 100;
         @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-20px); } }
         @keyframes fadeInText { to { opacity: 1; } }
 
-        nav { background-color: var(--primary-color); color: var(--white); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .logo { display: flex; align-items: center; font-size: 1.5rem; font-weight: 700; gap: 10px; }
+        nav { background-color: var(--primary-color); color: var(--white); padding: 0.9rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: var(--shadow-sm); }
+        .logo { display: flex; align-items: center; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; gap: 10px; }
         .logo i { color: var(--accent-color); }
-        .nav-links { list-style: none; display: flex; gap: 20px; align-items: center; }
-        .nav-links a { color: white; text-decoration: none; font-weight: 600; padding: 8px 12px; border-radius: 4px; transition: var(--transition); cursor: pointer; }
-        .nav-links a:hover, .nav-links a.active { background-color: rgba(255,255,255,0.15); color: var(--accent-color); }
-        .auth-btn { background: var(--accent-color); color: var(--primary-color) !important; padding: 8px 20px !important; border-radius: 20px; text-align: center; }
+        .nav-links { list-style: none; display: flex; gap: 6px; align-items: center; }
+        .nav-links a { color: rgba(255,255,255,0.9); text-decoration: none; font-weight: 500; font-size: 0.92rem; padding: 8px 14px; border-radius: var(--radius); transition: var(--transition); cursor: pointer; }
+        .nav-links a:hover, .nav-links a.active { background-color: rgba(255,255,255,0.12); color: var(--accent-color); }
+        .auth-btn { background: var(--accent-color); color: var(--primary-color) !important; padding: 8px 20px !important; border-radius: var(--radius); font-weight: 600 !important; text-align: center; margin-left: 6px; }
+
+        .notif-bell-wrap { position: relative; }
+        .notif-bell { position: relative; color: white; font-size: 1.1rem; cursor: pointer; padding: 8px 12px; border-radius: var(--radius); display: inline-block; }
+        .notif-bell:hover { background-color: rgba(255,255,255,0.12); }
+        .notif-badge { position: absolute; top: 2px; right: 4px; background: var(--danger); color: white; font-size: 0.62rem; font-weight: 700; min-width: 15px; height: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+        .notif-dropdown { display: none; position: absolute; top: 110%; right: 0; background: white; color: #333; width: 320px; max-width: 90vw; max-height: 400px; overflow-y: auto; border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: var(--shadow-md); z-index: 3000; text-align: left; }
+        .notif-dropdown.open { display: block; }
+        .notif-dropdown-header {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 11px 14px; font-weight: 700; font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color); background: #f8f9fa;
+            position: sticky; top: 0;
+        }
+        .notif-markall { background: none; border: none; color: var(--primary-color); font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; }
+        .notif-markall:hover { text-decoration: underline; }
+        .notif-empty { padding: 22px 15px; color: #888; text-align: center; font-size: 0.88rem; }
+        /* One row per alert, matching the admin panel's bell. */
+        .notif-link { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-bottom: 1px solid #eee; font-size: 0.85rem; line-height: 1.45; }
+        .notif-link:last-child { border-bottom: none; }
+        .notif-link i { margin-top: 3px; flex-shrink: 0; }
+        .notif-link strong { display: inline; }
+        .notif-link .notif-meta { display: block; color: #767e89; font-size: 0.75rem; margin-top: 3px; }
+        .notif-link form { margin-top: 8px; }
+        .notif-link[data-goto] { cursor: pointer; }
+        .notif-link[data-goto]:hover { background: #f8f9fa; }
+        /* Unread until the next time the bell is opened. */
+        .notif-link.is-new { background: #fffbe6; }
+        .notif-link.is-new[data-goto]:hover { background: #fff6cc; }
+        .notif-dismiss-btn { border: none; padding: 6px 14px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
+        .notif-dismiss-approved { background-color: #28a745; color: white; }
+        .notif-dismiss-rejected { background-color: #dc3545; color: white; }
         
         .menu-toggle { display: none; font-size: 1.8rem; cursor: pointer; color: white; }
 
         .container { max-width: 1100px; margin: 2rem auto; padding: 0 20px; display: none; }
-        .container.active { display: block; animation: fadeIn 0.5s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        h1, h2, h3 { color: var(--primary-color); margin-bottom: 1rem; }
-        .section-header { text-align: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #ddd; }
+        .container.active { display: block; animation: fadeIn 0.4s ease-out forwards; }
+        #home.container { margin-top: 0; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        h1, h2, h3 { color: var(--primary-color); margin-bottom: 1rem; letter-spacing: -0.01em; }
+        .section-header { text-align: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
         img { max-width: 100%; height: auto; }
 
-        .hero { background: linear-gradient(rgba(0,51,102,0.7), rgba(0,51,102,0.7)), url('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1000&q=80'); background-size: cover; background-position: center; padding: 4rem 2rem; border-radius: 8px; text-align: center; margin-bottom: 2rem; color: white; }
-        .hero h1 { color: white; font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.6); }
-        .hero p { color: #f1f1f1; font-size: 1.1rem; }
+        .hero {
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+            min-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(rgba(0,40,80,0.55), rgba(0,40,80,0.75)), url('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1600&q=80');
+            background-size: cover;
+            background-position: center;
+            text-align: center;
+            margin-bottom: 0;
+            padding: 3.5rem 2rem;
+            color: white;
+        }
+        .hero h1 { color: white; font-size: 3rem; font-weight: 800; letter-spacing: -0.02em; text-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+        .hero p { color: #e8ecf0; font-size: 1.15rem; max-width: 500px; }
 
-        .content-box { background: white; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
-        .ordinance-box { border-left: 5px solid var(--accent-color); }
+        .mission-band {
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 3.5rem 2rem;
+            margin-bottom: 2rem;
+        }
+        .mission-band h2 { color: white; font-size: 1.7rem; margin-bottom: 1rem; }
+        .mission-band p { color: rgba(255,255,255,0.85); font-size: 1.05rem; max-width: 640px; margin: 0 auto; line-height: 1.7; }
+
+        .content-box { background: white; padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 2rem; box-shadow: var(--shadow-sm); }
+        .ordinance-box { border-left: 3px solid var(--accent-color); }
         .req-list li { margin-bottom: 15px; list-style: none; padding-left: 1.5rem; position: relative; }
         .req-list li::before { content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900; color: var(--success); position: absolute; left: 0; top: 3px; }
 
@@ -230,6 +356,7 @@ if ($progress_percent > 100) $progress_percent = 100;
         .faq-item.open p { display: block; animation: slideDown 0.3s ease; }
         @keyframes slideDown { from {opacity:0; transform:translateY(-5px);} to {opacity:1; transform:translateY(0);} }
 
+<<<<<<< HEAD
         .pet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
         .pet-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 3px 6px rgba(0,0,0,0.1); transition: var(--transition); position: relative; }
         .pet-card:hover { transform: translateY(-5px); }
@@ -251,21 +378,65 @@ if ($progress_percent > 100) $progress_percent = 100;
         .shelter-card { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 2rem; display: flex; gap: 2rem; align-items: flex-start; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
         .shelter-logo img { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid var(--primary-color); padding: 2px; }
         .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; margin-left: 10px; }
+=======
+        .pet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+        .pet-card { background: white; border-radius: var(--radius); border: 1px solid var(--border-color); overflow: hidden; box-shadow: var(--shadow-sm); transition: var(--transition); position: relative; }
+        .pet-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+        .pet-img { height: 190px; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .pet-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+        .pet-card:hover .pet-img img { transform: scale(1.04); }
+        .pet-details { padding: 1.25rem; }
+
+        .badge-new { position: absolute; top: 10px; right: 10px; background: var(--accent-color); color: var(--primary-color); padding: 3px 10px; border-radius: var(--radius); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.02em; }
+
+        .pet-details details { margin-bottom: 15px; background: #f9f9f9; padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--border-color); }
+        .pet-details summary { cursor: pointer; font-weight: 600; color: var(--primary-color); outline: none; font-size: 0.85rem; list-style: none; display: flex; align-items: center; gap: 8px; }
+        .pet-details summary::-webkit-details-marker { display: none; }
+        .pet-details summary::before { content: "\f105"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 0.75rem; color: #999; transition: transform 0.15s ease; }
+        .pet-details details[open] summary::before { transform: rotate(90deg); }
+
+        .lf-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 1.75rem; }
+        .report-form { background: white; padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
+        .missing-feed { display: flex; flex-direction: column; gap: 12px; }
+        .missing-card { background: white; padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border-color); border-left: 3px solid var(--danger); display: flex; gap: 15px; box-shadow: var(--shadow-sm); align-items: flex-start; }
+        .missing-img-container { width: 100px; height: 100px; background: #eee; border-radius: var(--radius); flex-shrink: 0; overflow: hidden; }
+        .missing-img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .active-report-card { background: #f8f9fa; border: 1px solid var(--border-color); padding: 10px; border-radius: var(--radius); display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
+
+        .shelter-card { background: white; border-radius: var(--radius); border: 1px solid var(--border-color); padding: 1.75rem; margin-bottom: 1.5rem; display: flex; gap: 1.75rem; align-items: flex-start; box-shadow: var(--shadow-sm); }
+        .shelter-logo img { width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 3px solid var(--primary-color); padding: 2px; }
+        .status-badge { display: inline-block; padding: 3px 12px; border-radius: var(--radius); font-weight: 700; font-size: 0.78rem; margin-left: 10px; }
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         .status-open { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .status-full { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
         .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: #555; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        .btn-primary { display: block; width: 100%; padding: 12px; background-color: var(--primary-color); color: white; border: none; border-radius: 4px; margin-top: 1rem; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #555; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius); font-size: 0.95rem; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0,51,102,0.1); }
+        .btn-primary { display: block; width: 100%; padding: 11px; background-color: var(--primary-color); color: white; border: none; border-radius: var(--radius); margin-top: 1rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: 0.15s ease; }
         .btn-primary:hover { background-color: var(--accent-color); color: var(--primary-color); }
-        .btn-secondary { background-color: #e2e6ea; color: #333; border: 1px solid #ccc; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px; font-size: 0.9rem; }
-        .btn-secondary:hover { background-color: #dbe0e5; }
-        
-        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-        .modal-content { background-color: #fefefe; padding: 2rem; border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; animation: fadeIn 0.3s; }
-        .close-modal { float: right; font-size: 28px; cursor: pointer; color: #aaa; position: absolute; right: 20px; top: 15px; }
+        .btn-secondary { background-color: #eef0f2; color: #333; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: var(--radius); cursor: pointer; margin-left: 5px; font-size: 0.85rem; font-weight: 600; }
+        .btn-secondary:hover { background-color: #e2e6ea; }
 
+<<<<<<< HEAD
+=======
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(15,23,32,0.55); align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-content { background-color: #fefefe; padding: 1.75rem; border-radius: var(--radius); border: 1px solid var(--border-color); width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: var(--shadow-md); animation: fadeIn 0.25s; }
+        .close-modal { float: right; font-size: 26px; cursor: pointer; color: #aaa; position: absolute; right: 18px; top: 12px; line-height: 1; }
+        .close-modal:hover { color: #555; }
+
+        .confirm-modal-content { max-width: 400px; text-align: center; }
+        .confirm-modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .confirm-modal-actions button { margin: 0; }
+        .btn-neutral { background-color: #6c757d; color: white; border: none; padding: 11px; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 0.95rem; flex: 1; }
+        .btn-neutral:hover { background-color: #5a6268; }
+        .confirm-modal-actions .btn-primary { flex: 1; margin-top: 0; }
+
+        #app-toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px); background: var(--primary-color); color: white; padding: 12px 22px; border-radius: var(--radius); box-shadow: var(--shadow-md); font-size: 0.9rem; font-weight: 500; z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
+        #app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             nav { padding: 1rem; }
@@ -300,6 +471,20 @@ if ($progress_percent > 100) $progress_percent = 100;
             
             form[method="GET"] { flex-direction: column; }
             form[method="GET"] input, form[method="GET"] select, form[method="GET"] button { width: 100%; }
+<<<<<<< HEAD
+=======
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 0 14px; margin: 1.25rem auto; }
+            .hero { padding: 1.75rem 1rem; }
+            .hero h1 { font-size: 1.5rem; }
+            .hero p { font-size: 0.95rem; }
+            .content-box, .ordinance-box { padding: 1.1rem; }
+            .modal-content { padding: 1.25rem; width: 94%; }
+            .pet-details { padding: 1rem; }
+            .notif-dropdown { width: 260px; }
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         }
     </style>
 </head>
@@ -322,7 +507,35 @@ if ($progress_percent > 100) $progress_percent = 100;
             <?php if(isset($_SESSION['user_id'])): ?>
                 <li><a onclick="showPage('adopt')" id="nav-adopt">Adopt</a></li>
                 <li><a onclick="showPage('lost')" id="nav-lost">Lost & Found</a></li>
+<<<<<<< HEAD
                 
+=======
+
+                <li class="notif-bell-wrap">
+                    <span class="notif-bell" id="notif-bell" role="button" tabindex="0" title="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <!-- Count is computed client-side from what's already been
+                             seen, so it starts hidden and notifications.js fills it. -->
+                        <span class="notif-badge" id="notif-badge" style="display:none;">0</span>
+                    </span>
+                    <div class="notif-dropdown" id="notif-dropdown">
+                        <div class="notif-dropdown-header">
+                            <span>Notifications</span>
+                            <button type="button" class="notif-markall" id="notif-markall">Mark all read</button>
+                        </div>
+                        <!-- Swapped by live-sync when this user's applications change
+                             or a pet is reunited, so alerts land without a refresh. -->
+                        <div id="notif-dropdown-body" data-live="notifications lost_pets">
+                            <?php if ($notification_count > 0): ?>
+                                <?php echo $notifications_html; ?>
+                            <?php else: ?>
+                                <div class="notif-empty">You're all caught up — no notifications.</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </li>
+
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                 <li style="color:var(--accent-color); margin:10px 0;">Hi, <?php echo htmlspecialchars(isset($_SESSION['name']) ? $_SESSION['name'] : 'User'); ?></li>
                 <li><a href="logout.php" class="auth-btn">Logout</a></li>
             <?php else: ?>
@@ -331,12 +544,18 @@ if ($progress_percent > 100) $progress_percent = 100;
         </ul>
     </nav>
 
-    <?php if(isset($_SESSION['flash_msg'])): ?>
-    <div id="flash-banner" style="position: fixed; top: 90px; right: 20px; z-index: 9999; background: var(--success); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 15px; transition: opacity 0.5s ease;">
-        <i class="fas fa-check-circle" style="font-size: 1.5rem;"></i>
+    <?php if((isset($_SESSION['flash_msg']) || isset($_SESSION['flash_error'])) && !$is_live_fetch):
+        $is_error = isset($_SESSION['flash_error']);
+        $flash_text = $is_error ? $_SESSION['flash_error'] : $_SESSION['flash_msg'];
+        $flash_bg = $is_error ? 'var(--danger)' : 'var(--success)';
+        $flash_icon = $is_error ? 'fa-circle-exclamation' : 'fa-check-circle';
+        $flash_title = $is_error ? 'Something went wrong' : 'Success!';
+    ?>
+    <div id="flash-banner" style="position: fixed; top: 90px; right: 20px; z-index: 9999; background: <?php echo $flash_bg; ?>; color: white; padding: 15px 25px; border-radius: var(--radius); box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 15px; transition: opacity 0.5s ease;">
+        <i class="fas <?php echo $flash_icon; ?>" style="font-size: 1.5rem;"></i>
         <div>
-            <h4 style="margin: 0; color: white;">Success!</h4>
-            <p style="margin: 0; font-size: 0.9rem;"><?php echo $_SESSION['flash_msg']; ?></p>
+            <h4 style="margin: 0; color: white;"><?php echo $flash_title; ?></h4>
+            <p style="margin: 0; font-size: 0.9rem;"><?php echo htmlspecialchars($flash_text); ?></p>
         </div>
         <button onclick="this.parentElement.style.opacity='0'; setTimeout(()=>this.parentElement.style.display='none', 500);" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; margin-left: 10px;">&times;</button>
     </div>
@@ -349,6 +568,7 @@ if ($progress_percent > 100) $progress_percent = 100;
             }
         }, 5000);
     </script>
+<<<<<<< HEAD
     <?php unset($_SESSION['flash_msg']); endif; ?> 
 
     <?php
@@ -406,6 +626,9 @@ if (isset($_SESSION['user_id'])) {
     }
 }
 ?>
+=======
+    <?php unset($_SESSION['flash_msg']); unset($_SESSION['flash_error']); endif; ?>
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
 
 <section id="home" class="container active">
         <div class="hero">
@@ -428,7 +651,16 @@ if (isset($_SESSION['user_id'])) {
                 </a>
             </div>
             <?php endif; ?>
+<<<<<<< HEAD
             
+=======
+
+        </div>
+
+        <div class="mission-band">
+            <h2>Our Mission</h2>
+            <p>We believe every stray and shelter animal in Baguio deserves a second chance. FurFinder connects rescued dogs and cats with loving adopters, and helps reunite lost pets with the families searching for them.</p>
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         </div>
 
         <div class="content-box">
@@ -474,7 +706,65 @@ if (isset($_SESSION['user_id'])) {
                 <li><strong>Dog Cage & Leash:</strong> Required for transport.</li>
             </ul>
         </div>
+
     </section>
+
+<section id="shelters" class="container">
+    <div class="section-header"><h2>Shelter</h2></div>
+    <?php
+    $cvao_status = "Open";
+    $cvao_res = $conn->query("SELECT status FROM shelters WHERE name LIKE '%Baguio%' LIMIT 1");
+    if($cvao_res && $r = $cvao_res->fetch(PDO::FETCH_ASSOC)) $cvao_status = $r['status'];
+    ?>
+    <div class="shelter-card" id="shelter-card" data-live="shelters">
+        <div class="shelter-logo"><img src="uploads/shelter_cvao.jpg" onerror="this.src='https://via.placeholder.com/100?text=Logo'"></div>
+        <div class="shelter-info">
+            <h3>Baguio City Vet Office <span class="status-badge <?php echo ($cvao_status=='Open')?'status-open':'status-full'; ?>"><?php echo $cvao_status; ?></span></h3>
+            <ul>
+                <li><i class="fas fa-map-marker-alt"></i> Slaughterhouse Cmpnd, Baguio</li>
+                <li><a href="tel:0744435332" style="color:inherit; text-decoration:none;"><i class="fas fa-phone"></i> (074) 443-5332</a></li>
+                <li><i class="far fa-clock"></i> Mon - Fri, 8AM - 5PM</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section id="donate" class="container">
+    <div class="content-box" style="max-width:800px; margin:0 auto 2rem auto; padding: 20px;">
+        <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: var(--radius); border-left: 5px solid #dc3545; margin-bottom: 25px; text-align: center;">
+            <strong><i class="fas fa-exclamation-triangle"></i> CVAO Policy Notice:</strong><br>
+            The Baguio City Veterinary and Agriculture Office strictly accepts <strong>IN-KIND DONATIONS ONLY</strong>. We do not accept monetary donations (cash, GCash, or bank transfers).
+        </div>
+
+        <h3 style="text-align:center; color:var(--primary-color); margin-bottom: 20px;"><i class="fas fa-box-open"></i> What We Currently Need</h3>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; text-align: left;">
+            <div style="background: #f8f9fa; padding: 15px; border-radius: var(--radius); border: 1px solid var(--border-color);">
+                <h4 style="color: var(--success); margin-top: 0;"><i class="fas fa-dog"></i> Food & Feeding</h4>
+                <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
+                    <li>Adult Dog Food & Puppy Kibble</li>
+                    <li>Adult Cat Food & Kitten Wet Food</li>
+                    <li>Stainless Steel Feeding Bowls</li>
+                </ul>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 15px; border-radius: var(--radius); border: 1px solid var(--border-color);">
+                <h4 style="color: #17a2b8; margin-top: 0;"><i class="fas fa-pump-soap"></i> Shelter Supplies</h4>
+                <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
+                    <li>Leashes, Collars, and Harnesses</li>
+                    <li>Old Towels and Blankets</li>
+                    <li>Pet Soap, Shampoo, and Cleaning Brushes</li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee;">
+            <p style="color: #666; margin: 0;">
+                <strong>Drop-off Location:</strong> Baguio CVAO Compound, Slaughterhouse Compound, Magsaysay Ave.
+            </p>
+        </div>
+    </div>
+</section>
 
 <section id="adopt" class="container">
         <div class="section-header">
@@ -504,7 +794,7 @@ if (isset($_SESSION['user_id'])) {
             </form>
         </div>
 
-        <div class="pet-grid">
+        <div class="pet-grid" id="pet-grid" data-live="pets">
             <?php
             $sql = "SELECT * FROM pets WHERE status='available' AND is_archived = 0";
             $params = []; // Array to hold our secure PDO parameters
@@ -544,10 +834,15 @@ if (isset($_SESSION['user_id'])) {
                             <h3 style='margin-bottom: 3px;'>" . htmlspecialchars($row['name']) . "</h3>
                             <p style='color: #666; font-size: 0.9rem; margin-bottom: 12px; font-weight: 600;'>" . htmlspecialchars($row['breed']) . " • " . htmlspecialchars($row['age']) . "</p>
                             
+<<<<<<< HEAD
                             <details style='margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eaeaea;'>
                                 <summary style='cursor: pointer; font-weight: bold; color: var(--primary-color); outline: none; font-size: 0.9rem;'>
                                     <i class='fas fa-book-open'></i> Read My Story
                                 </summary>
+=======
+                            <details>
+                                <summary><i class='fas fa-book-open'></i> Read My Story</summary>
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                                 <div style='margin-top: 12px; font-size: 0.85rem; color: #444;'>
                                     <p style='margin-bottom: 8px;'><strong>About Me:</strong><br> $backstory</p>
                                     <p style='border-top: 1px dashed #ccc; padding-top: 8px;'><strong><i class='fas fa-notes-medical' style='color: var(--danger);'></i> Health Info:</strong><br> $medical</p>
@@ -555,7 +850,7 @@ if (isset($_SESSION['user_id'])) {
                             </details>
 
                             <div style='display:flex; gap:5px; margin-top:10px;'>
-                                <button class='btn-primary' style='flex:1; margin-top:0;' onclick=\"openAdoptModal('{$row['name']}')\">Apply to Adopt</button>
+                                <button class='btn-primary' style='flex:1; margin-top:0;' onclick=\"openProcessModal('{$row['name']}')\">Apply to Adopt</button>
                                 <button class='btn-secondary' onclick=\"sharePet('{$row['name']}', '{$row['breed']}')\"><i class='fas fa-share-alt'></i></button>
                             </div>
                         </div>
@@ -577,7 +872,7 @@ if (isset($_SESSION['user_id'])) {
         <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; border-top: 4px solid var(--primary-color);">
             <h3 style="margin-bottom: 15px; color: var(--primary-color);"><i class="fas fa-clipboard-list"></i> My Active Reports</h3>
             
-            <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 15px;" id="my-reports" data-live="lost_pets">
                 <?php
                 $my_uid = $_SESSION['user_id'];
                 $my_reports = $conn->query("SELECT * FROM lost_pets WHERE user_id = '$my_uid' AND status = 'Missing'");
@@ -592,15 +887,19 @@ if (isset($_SESSION['user_id'])) {
                             <span style="font-size: 0.85rem; color: #666;">Reported Missing</span>
                         </div>
                         <div class="active-report-actions" style="display: flex; gap: 8px;">
+<<<<<<< HEAD
                             <form method="POST" style="margin: 0;">
+=======
+                            <form method="POST" style="margin: 0;" class="js-confirm" data-confirm-msg="Are you sure you want to mark this pet as found?">
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                                 <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
-                                <button type="submit" name="mark_as_found" class="btn-primary" style="background: var(--success); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to mark this pet as found?');">
+                                <button type="submit" name="mark_as_found" class="btn-primary" style="background: var(--success); margin: 0; padding: 8px 15px; font-size: 0.85rem;">
                                     <i class="fas fa-check"></i> Found
                                 </button>
                             </form>
-                            <form method="POST" style="margin: 0;">
+                            <form method="POST" style="margin: 0;" class="js-confirm" data-confirm-msg="Are you sure you want to permanently delete this report?">
                                 <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
-                                <button type="submit" name="delete_own_report" class="btn-primary" style="background: var(--danger); margin: 0; padding: 8px 15px; font-size: 0.85rem;" onclick="return confirm('Are you sure you want to permanently delete this report?');">
+                                <button type="submit" name="delete_own_report" class="btn-primary" style="background: var(--danger); margin: 0; padding: 8px 15px; font-size: 0.85rem;">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                             </form>
@@ -624,7 +923,11 @@ if (isset($_SESSION['user_id'])) {
                     <strong><i class="fas fa-user-lock"></i> Privacy Notice:</strong><br>
                     Your contact information is kept strictly confidential. Only the <strong>CVAO Admin</strong> will be able to view your phone number to coordinate with you if your pet is found.
                 </div>
+<<<<<<< HEAD
                 <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Are you sure you want to post this lost pet alert?');">
+=======
+                <form method="POST" enctype="multipart/form-data" class="js-confirm" data-confirm-msg="Are you sure you want to post this lost pet alert?">
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                     <div class="form-group"><label>Pet Name</label><input type="text" name="lf_name" required></div>
                     <div class="form-group"><label>Location Last Seen</label><input type="text" name="lf_location" required></div>
                     <div class="form-group"><label>Time & Date Last Seen</label><input type="datetime-local" name="lf_time" id="lf_time_input" required></div>
@@ -648,7 +951,11 @@ if (isset($_SESSION['user_id'])) {
                     </button>
                 </div>
 
+<<<<<<< HEAD
                 <div id="feed-missing" style="display: block;">
+=======
+                <div id="feed-missing" data-live="lost_pets" style="display: block;">
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                     <?php
                     $missing_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' ORDER BY id DESC");
                     
@@ -688,10 +995,31 @@ if (isset($_SESSION['user_id'])) {
                     ?>
                 </div>
 
+<<<<<<< HEAD
                 <div id="feed-found" style="display: none;">
                     <?php
                     $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
                     
+=======
+                <div id="feed-found" data-live="lost_pets" style="display: none;">
+                    <?php
+                    // Reunions stay on the public feed for FOUND_ANNOUNCEMENT_DAYS
+                    // and then drop off on their own - no cleanup job, just a
+                    // filter. The row itself is kept; the admin's Lost & Found
+                    // table still lists it in full.
+                    try {
+                        $found_query = $conn->query(
+                            "SELECT * FROM lost_pets
+                              WHERE status = 'Found' AND is_archived = 0
+                                AND COALESCE(found_at, created_at) > NOW() - INTERVAL '" . FOUND_ANNOUNCEMENT_DAYS . " days'
+                           ORDER BY COALESCE(found_at, created_at) DESC, id DESC"
+                        );
+                    } catch (PDOException $e) {
+                        error_log('Reunited feed: no found_at/created_at yet (run migrate.php?): ' . $e->getMessage());
+                        $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' AND is_archived = 0 ORDER BY id DESC");
+                    }
+
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                     if($found_query && $found_query->rowCount() > 0) {
                         while($row = $found_query->fetch(PDO::FETCH_ASSOC)){
                             $map_query = urlencode($row['location'] . " Baguio City");
@@ -730,6 +1058,7 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </section>
 
+<<<<<<< HEAD
     <section id="shelters" class="container">
         <div class="section-header"><h2>Shelter</h2></div>
         <?php
@@ -787,13 +1116,42 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </section>
 
+=======
+    <div id="processModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeProcessModal()">×</span>
+            <h3>Adoption Process</h3>
+
+            <div style="margin-top:15px;">
+                <h4 style="color:var(--primary-color); margin-bottom:5px;">Step 1: Submit an Adoption Application</h4>
+                <p style="color:#666; margin-top:0;">Complete the adoption application form and provide all required information and supporting documents. After submitting your application, wait for your application to be reviewed.</p>
+
+                <h4 style="color:var(--primary-color); margin-bottom:5px;">Step 2: Application Approval</h4>
+                <p style="color:#666; margin-top:0;">Once your application has been reviewed and approved, you may proceed to the next step of the adoption process.</p>
+
+                <h4 style="color:var(--primary-color); margin-bottom:5px;">Step 3: Visit the City Veterinary Office</h4>
+                <p style="color:#666; margin-top:0;">Visit the City Veterinary Office for a face-to-face assessment and to meet and see your chosen pet in person.</p>
+
+                <h4 style="color:var(--primary-color); margin-bottom:5px;">Step 4: Complete the Adoption</h4>
+                <p style="color:#666; margin-top:0;">After completing the required process, settle the ₱700 adoption fee and complete the necessary adoption requirements. Once completed, you may bring your chosen pet home.</p>
+            </div>
+
+            <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
+                <p style="color:#666;"><strong>Ready to Apply?</strong> Click "Proceed to Application" to begin your adoption application.</p>
+                <button type="button" class="btn-primary" onclick="proceedToApplication()">Proceed to Application</button>
+            </div>
+        </div>
+    </div>
+
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
     <div id="adoptModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeAdoptModal()">×</span>
             <h3>Adopt <span id="adopt-pet-name"></span></h3>
             <p style="margin-bottom:15px; font-size:0.9rem; color:#666;">Please fill out the form honestly. No login required.</p>
             
-            <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Are you sure you want to submit this adoption application? Please verify that all your details and documents are correct.');">
+            <form method="POST" enctype="multipart/form-data" id="adoptApplicationForm">
+                <input type="hidden" name="submit_application" value="1">
                 <input type="hidden" id="app_pet_name" name="app_pet_name">
                 
                 <h4 style="color:var(--primary-color); border-bottom:1px solid #eee; margin-bottom:10px;">Personal Details</h4>
@@ -846,11 +1204,40 @@ if (isset($_SESSION['user_id'])) {
                     <label style="display: block; margin-bottom: 5px;">3. Photo of Pet Cage or Secure Area</label>
                     <input type="file" name="cage_photo" accept="image/*" required style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
                 </div>
+<<<<<<< HEAD
                 <button type="submit" name="submit_application" class="btn-primary">Submit Application</button>
+=======
+                <button type="button" class="btn-primary" onclick="return validateAndConfirmApplication()">Submit Application</button>
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
             </form>
         </div>
     </div>
 
+<<<<<<< HEAD
+=======
+    <div id="confirmSubmitModal" class="modal">
+        <div class="modal-content confirm-modal-content">
+            <h3 style="margin-top:0;">Submit Application?</h3>
+            <p style="color:#666;">Are you sure you want to submit this adoption application? Please verify that all your details and documents are correct.</p>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn-neutral" onclick="closeConfirmSubmitModal()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="confirmSubmitApplication()">Yes, Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="genericConfirmModal" class="modal">
+        <div class="modal-content confirm-modal-content">
+            <h3 style="margin-top:0;">Please Confirm</h3>
+            <p id="genericConfirmMessage" style="color:#666;">Are you sure?</p>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn-neutral" onclick="closeGenericConfirm()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="confirmGenericAction()">Yes, Continue</button>
+            </div>
+        </div>
+    </div>
+
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
     <script>
         window.addEventListener('load', () => {
             const loader = document.getElementById('loader');
@@ -871,13 +1258,41 @@ if (isset($_SESSION['user_id'])) {
             document.getElementById(pageId).classList.add('active');
             const link = document.getElementById('nav-' + pageId);
             if(link) link.classList.add('active');
+<<<<<<< HEAD
             
             document.getElementById('nav-links').classList.remove('active-nav');
         }
 
         function toggleMobileNav() {
             document.getElementById('nav-links').classList.toggle('active-nav');
+=======
+
+            document.getElementById('nav-links').classList.remove('active-nav');
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         }
+
+        function toggleMobileNav() {
+            document.getElementById('nav-links').classList.toggle('active-nav');
+        }
+
+        // Opening, closing, unread tracking and the live refresh all come from
+        // notifications.js - the same module the admin panel uses.
+
+        // Pets, lost & found reports, shelter status and the notification bell all
+        // refresh themselves through live-sync.js - see the data-live attributes.
+        document.addEventListener('DOMContentLoaded', () => {
+            NotificationBell.create({
+                storageKey: 'furfinder_user_notif_seen',
+                bellId: 'notif-bell',
+                badgeId: 'notif-badge',
+                dropdownId: 'notif-dropdown',
+                bodyId: 'notif-dropdown-body',
+                markAllId: 'notif-markall',
+                datasets: ['notifications', 'lost_pets'],
+                onSelect: (link) => showPage(link.dataset.goto)
+            });
+            LiveSync.start({ interval: 5000 });
+        });
 
         function toggleFaq(element) {
             element.classList.toggle('open');
@@ -891,6 +1306,20 @@ if (isset($_SESSION['user_id'])) {
             }
         }
 
+        let pendingAdoptPetName = '';
+
+        function openProcessModal(name) {
+            pendingAdoptPetName = name;
+            document.getElementById('processModal').style.display = 'flex';
+        }
+        function closeProcessModal() {
+            document.getElementById('processModal').style.display = 'none';
+        }
+        function proceedToApplication() {
+            closeProcessModal();
+            openAdoptModal(pendingAdoptPetName);
+        }
+
         function openAdoptModal(name) {
             document.getElementById('adopt-pet-name').innerText = name;
             document.getElementById('app_pet_name').value = name;
@@ -900,6 +1329,52 @@ if (isset($_SESSION['user_id'])) {
             document.getElementById('adoptModal').style.display = 'none';
         }
 
+        function validateAndConfirmApplication() {
+            const form = document.getElementById('adoptApplicationForm');
+            if (!form.reportValidity()) return false;
+            document.getElementById('confirmSubmitModal').style.display = 'flex';
+            return false;
+        }
+        function closeConfirmSubmitModal() {
+            document.getElementById('confirmSubmitModal').style.display = 'none';
+        }
+        function confirmSubmitApplication() {
+            closeConfirmSubmitModal();
+            document.getElementById('adoptApplicationForm').submit();
+        }
+
+        let pendingConfirmForm = null;
+        let pendingConfirmSubmitter = null;
+        document.querySelectorAll('form.js-confirm').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                if (form.dataset.confirmed === 'true') {
+                    form.dataset.confirmed = 'false';
+                    return;
+                }
+                e.preventDefault();
+                pendingConfirmForm = form;
+                pendingConfirmSubmitter = e.submitter;
+                document.getElementById('genericConfirmMessage').textContent = form.dataset.confirmMsg || 'Are you sure?';
+                document.getElementById('genericConfirmModal').style.display = 'flex';
+            });
+        });
+        function closeGenericConfirm() {
+            document.getElementById('genericConfirmModal').style.display = 'none';
+            pendingConfirmForm = null;
+            pendingConfirmSubmitter = null;
+        }
+        function confirmGenericAction() {
+            document.getElementById('genericConfirmModal').style.display = 'none';
+            if (pendingConfirmForm) {
+                pendingConfirmForm.dataset.confirmed = 'true';
+                if (pendingConfirmSubmitter && pendingConfirmForm.requestSubmit) {
+                    pendingConfirmForm.requestSubmit(pendingConfirmSubmitter);
+                } else {
+                    pendingConfirmForm.submit();
+                }
+            }
+        }
+
         function sharePet(name, breed) {
             if (navigator.share) {
                 navigator.share({
@@ -907,7 +1382,26 @@ if (isset($_SESSION['user_id'])) {
                     text: 'Check out ' + name + ', a ' + breed + ' at FurFinder!',
                     url: window.location.href
                 }).catch(console.error);
-            } else { alert('Link copied!'); }
+            } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(window.location.href)
+                    .then(() => showToast('Link copied to clipboard!'))
+                    .catch(() => showToast('Could not copy link.'));
+            } else {
+                showToast('Sharing is not supported on this browser.');
+            }
+        }
+
+        function showToast(message) {
+            let toast = document.getElementById('app-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'app-toast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            toast.classList.add('show');
+            clearTimeout(toast._hideTimer);
+            toast._hideTimer = setTimeout(() => toast.classList.remove('show'), 2500);
         }
 
         function switchLfTab(tabName) {
@@ -935,6 +1429,34 @@ if (isset($_SESSION['user_id'])) {
             }
         }
 
+<<<<<<< HEAD
+        function switchLfTab(tabName) {
+            var btnMissing = document.getElementById('tab-btn-missing');
+            var btnFound = document.getElementById('tab-btn-found');
+            var feedMissing = document.getElementById('feed-missing');
+            var feedFound = document.getElementById('feed-found');
+            
+            if (tabName === 'missing') {
+                btnMissing.style.background = 'var(--danger)';
+                btnMissing.style.color = 'white';
+                btnFound.style.background = '#e2e6ea';
+                btnFound.style.color = '#333';
+                
+                feedMissing.style.display = 'block';
+                feedFound.style.display = 'none';
+            } else {
+                btnFound.style.background = 'var(--success)';
+                btnFound.style.color = 'white';
+                btnMissing.style.background = '#e2e6ea';
+                btnMissing.style.color = '#333';
+                
+                feedFound.style.display = 'block';
+                feedMissing.style.display = 'none';
+            }
+        }
+
+=======
+>>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
         document.addEventListener('DOMContentLoaded', () => { showPage('<?php echo $activeTab; ?>'); });
     </script>
 </body>
