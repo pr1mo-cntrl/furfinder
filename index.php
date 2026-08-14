@@ -568,67 +568,7 @@ $is_live_fetch = isset($_GET['live']);
             }
         }, 5000);
     </script>
-<<<<<<< HEAD
-    <?php unset($_SESSION['flash_msg']); endif; ?> 
-
-    <?php
-if (isset($_POST['dismiss_notification'])) {
-    $app_id_to_dismiss = $_POST['app_id'];
-    
-    $result = $conn->query("SELECT status FROM applications WHERE id = '$app_id_to_dismiss'");
-    if ($result && $row = $result->fetch(PDO::FETCH_ASSOC)) {
-        $new_status = $row['status'] . '_Seen';
-        $conn->query("UPDATE applications SET status = '$new_status' WHERE id = '$app_id_to_dismiss'");
-    }
-    
-    echo "<script>window.location.href='index.php';</script>";
-}
-
-if (isset($_SESSION['user_id'])) {
-    $current_user_id = $_SESSION['user_id']; 
-    
-    $check_status = $conn->query("SELECT * FROM applications WHERE user_id = '$current_user_id' AND status IN ('Pending', 'Approved', 'Rejected')");
-
-    if ($check_status && $check_status->rowCount() > 0) {
-        while ($app = $check_status->fetch(PDO::FETCH_ASSOC)) {
-            $app_id = $app['id'];
-            $status = $app['status'];
-
-            if ($status == 'Pending') {
-                echo '
-                <div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 20px; width: 90%; margin-left: auto; margin-right: auto; text-align: center; font-family: sans-serif;">
-                    <strong>⏳ Application Pending:</strong> Your adoption application is currently under review by the CVAO team. We will update you here as soon as a decision is made!
-                </div>';
-            } 
-            elseif ($status == 'Approved') {
-                echo '
-                <div style="background-color: #d4edda; color: #155724; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb; margin-bottom: 20px; width: 90%; margin-left: auto; margin-right: auto; text-align: center; font-family: sans-serif;">
-                    <h3 style="margin-top: 0;">🎉 Application Approved!</h3>
-                    <p style="margin-bottom: 15px;">Your adoption application has been reviewed and approved. Please proceed to the Baguio City Veterinary and Agriculture Office (CVAO) for your physical screening and interview.</p>
-                    <form method="POST">
-                        <input type="hidden" name="app_id" value="' . $app_id . '">
-                        <button type="submit" name="dismiss_notification" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold;">Okay, got it!</button>
-                    </form>
-                </div>';
-            }
-            elseif ($status == 'Rejected') {
-                echo '
-                <div style="background-color: #f8d7da; color: #721c24; padding: 20px; border-radius: 8px; border: 1px solid #f5c6cb; margin-bottom: 20px; width: 90%; margin-left: auto; margin-right: auto; text-align: center; font-family: sans-serif;">
-                    <h3 style="margin-top: 0;">❌ Application Update</h3>
-                    <p style="margin-bottom: 15px;">We regret to inform you that your recent adoption application was not approved by the CVAO at this time. Thank you for your interest in providing a home for our shelter pets.</p>
-                    <form method="POST">
-                        <input type="hidden" name="app_id" value="' . $app_id . '">
-                        <button type="submit" name="dismiss_notification" style="background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold;">Dismiss</button>
-                    </form>
-                </div>';
-            }
-        }
-    }
-}
-?>
-=======
     <?php unset($_SESSION['flash_msg']); unset($_SESSION['flash_error']); endif; ?>
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
 
 <section id="home" class="container active">
         <div class="hero">
@@ -995,12 +935,6 @@ if (isset($_SESSION['user_id'])) {
                     ?>
                 </div>
 
-<<<<<<< HEAD
-                <div id="feed-found" style="display: none;">
-                    <?php
-                    $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' ORDER BY id DESC");
-                    
-=======
                 <div id="feed-found" data-live="lost_pets" style="display: none;">
                     <?php
                     // Reunions stay on the public feed for FOUND_ANNOUNCEMENT_DAYS
@@ -1019,7 +953,6 @@ if (isset($_SESSION['user_id'])) {
                         $found_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Found' AND is_archived = 0 ORDER BY id DESC");
                     }
 
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                     if($found_query && $found_query->rowCount() > 0) {
                         while($row = $found_query->fetch(PDO::FETCH_ASSOC)){
                             $map_query = urlencode($row['location'] . " Baguio City");
@@ -1058,65 +991,6 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </section>
 
-<<<<<<< HEAD
-    <section id="shelters" class="container">
-        <div class="section-header"><h2>Shelter</h2></div>
-        <?php
-        $cvao_status = "Open";
-        $cvao_res = $conn->query("SELECT status FROM shelters WHERE name LIKE '%Baguio%' LIMIT 1");
-        if($cvao_res && $r = $cvao_res->fetch(PDO::FETCH_ASSOC)) $cvao_status = $r['status'];
-        ?>
-        <div class="shelter-card">
-            <div class="shelter-logo"><img src="uploads/shelter_cvao.jpg" onerror="this.src='https://via.placeholder.com/100?text=Logo'"></div>
-            <div class="shelter-info">
-                <h3>Baguio City Vet Office <span class="status-badge <?php echo ($cvao_status=='Open')?'status-open':'status-full'; ?>"><?php echo $cvao_status; ?></span></h3>
-                <ul>
-                    <li><i class="fas fa-map-marker-alt"></i> Slaughterhouse Cmpnd, Baguio</li>
-                    <li><a href="tel:0744435332" style="color:inherit; text-decoration:none;"><i class="fas fa-phone"></i> (074) 443-5332</a></li>
-                    <li><i class="far fa-clock"></i> Mon - Fri, 8AM - 5PM</li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-    <section id="donate" class="container">
-        <div class="content-box" style="max-width:800px; margin:0 auto 2rem auto; padding: 20px;">
-            <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; margin-bottom: 25px; text-align: center;">
-                <strong><i class="fas fa-exclamation-triangle"></i> CVAO Policy Notice:</strong><br>
-                The Baguio City Veterinary and Agriculture Office strictly accepts <strong>IN-KIND DONATIONS ONLY</strong>. We do not accept monetary donations (cash, GCash, or bank transfers).
-            </div>
-
-            <h3 style="text-align:center; color:var(--primary-color); margin-bottom: 20px;"><i class="fas fa-box-open"></i> What We Currently Need</h3>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; text-align: left;">
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-                    <h4 style="color: var(--success); margin-top: 0;"><i class="fas fa-dog"></i> Food & Feeding</h4>
-                    <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
-                        <li>Adult Dog Food & Puppy Kibble</li>
-                        <li>Adult Cat Food & Kitten Wet Food</li>
-                        <li>Stainless Steel Feeding Bowls</li>
-                    </ul>
-                </div>
-                
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-                    <h4 style="color: #17a2b8; margin-top: 0;"><i class="fas fa-pump-soap"></i> Shelter Supplies</h4>
-                    <ul style="color: #555; padding-left: 20px; margin-bottom: 0;">
-                        <li>Leashes, Collars, and Harnesses</li>
-                        <li>Old Towels and Blankets</li>
-                        <li>Pet Soap, Shampoo, and Cleaning Brushes</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee;">
-                <p style="color: #666; margin: 0;">
-                    <strong>Drop-off Location:</strong> Baguio CVAO Compound, Slaughterhouse Compound, Magsaysay Ave.
-                </p>
-            </div>
-        </div>
-    </section>
-
-=======
     <div id="processModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeProcessModal()">×</span>
@@ -1143,7 +1017,6 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </div>
 
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
     <div id="adoptModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeAdoptModal()">×</span>
