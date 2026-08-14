@@ -774,15 +774,8 @@ $is_live_fetch = isset($_GET['live']);
                             <h3 style='margin-bottom: 3px;'>" . htmlspecialchars($row['name']) . "</h3>
                             <p style='color: #666; font-size: 0.9rem; margin-bottom: 12px; font-weight: 600;'>" . htmlspecialchars($row['breed']) . " • " . htmlspecialchars($row['age']) . "</p>
                             
-<<<<<<< HEAD
-                            <details style='margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eaeaea;'>
-                                <summary style='cursor: pointer; font-weight: bold; color: var(--primary-color); outline: none; font-size: 0.9rem;'>
-                                    <i class='fas fa-book-open'></i> Read My Story
-                                </summary>
-=======
                             <details>
                                 <summary><i class='fas fa-book-open'></i> Read My Story</summary>
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                                 <div style='margin-top: 12px; font-size: 0.85rem; color: #444;'>
                                     <p style='margin-bottom: 8px;'><strong>About Me:</strong><br> $backstory</p>
                                     <p style='border-top: 1px dashed #ccc; padding-top: 8px;'><strong><i class='fas fa-notes-medical' style='color: var(--danger);'></i> Health Info:</strong><br> $medical</p>
@@ -827,11 +820,7 @@ $is_live_fetch = isset($_GET['live']);
                             <span style="font-size: 0.85rem; color: #666;">Reported Missing</span>
                         </div>
                         <div class="active-report-actions" style="display: flex; gap: 8px;">
-<<<<<<< HEAD
-                            <form method="POST" style="margin: 0;">
-=======
                             <form method="POST" style="margin: 0;" class="js-confirm" data-confirm-msg="Are you sure you want to mark this pet as found?">
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                                 <input type="hidden" name="report_id" value="<?php echo $my_row['id']; ?>">
                                 <button type="submit" name="mark_as_found" class="btn-primary" style="background: var(--success); margin: 0; padding: 8px 15px; font-size: 0.85rem;">
                                     <i class="fas fa-check"></i> Found
@@ -863,11 +852,7 @@ $is_live_fetch = isset($_GET['live']);
                     <strong><i class="fas fa-user-lock"></i> Privacy Notice:</strong><br>
                     Your contact information is kept strictly confidential. Only the <strong>CVAO Admin</strong> will be able to view your phone number to coordinate with you if your pet is found.
                 </div>
-<<<<<<< HEAD
-                <form method="POST" enctype="multipart/form-data" onsubmit="return confirm('Are you sure you want to post this lost pet alert?');">
-=======
                 <form method="POST" enctype="multipart/form-data" class="js-confirm" data-confirm-msg="Are you sure you want to post this lost pet alert?">
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                     <div class="form-group"><label>Pet Name</label><input type="text" name="lf_name" required></div>
                     <div class="form-group"><label>Location Last Seen</label><input type="text" name="lf_location" required></div>
                     <div class="form-group"><label>Time & Date Last Seen</label><input type="datetime-local" name="lf_time" id="lf_time_input" required></div>
@@ -891,11 +876,7 @@ $is_live_fetch = isset($_GET['live']);
                     </button>
                 </div>
 
-<<<<<<< HEAD
-                <div id="feed-missing" style="display: block;">
-=======
                 <div id="feed-missing" data-live="lost_pets" style="display: block;">
->>>>>>> 3e606c439038629fba2f8a7fb6edf69a91e11707
                     <?php
                     $missing_query = $conn->query("SELECT * FROM lost_pets WHERE status = 'Missing' ORDER BY id DESC");
                     
