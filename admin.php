@@ -333,6 +333,10 @@ try {
 $last_3 = array_slice($historical_data, -3);
 $prediction = count($last_3) > 0 ? ceil(array_sum($last_3) / count($last_3)) : 0;
 
+// --- NEW: Generate Dynamic Summary String ---
+$predicted_month = date('F Y', strtotime('+1 month'));
+$trend_summary = "Based on the 3-month moving average, the system forecasts approximately " . $prediction . " adoption application(s) for " . $predicted_month . ".";
+
 // Push the predicted month onto the arrays
 $forecast_labels[] = date('M Y', strtotime('+1 month')) . ' (Forecast)';
 $historical_data[] = null; 
@@ -349,7 +353,8 @@ $analytics_payload = [
     'forecast' => [
         'labels' => $forecast_labels,
         'historical' => $historical_data,
-        'prediction' => $forecast_data
+        'prediction' => $forecast_data,
+        'summary' => $trend_summary // NEW summary field added here
     ]
 ];
 
@@ -1074,6 +1079,8 @@ $is_live_fetch = isset($_GET['live']);
                 <div class="chart-card chart-card-wide">
                     <h4>Application Volume Forecast (30-Day Trend)</h4>
                     <p style="text-align: center; font-size: 0.8rem; color: #767e89; margin-bottom: 10px;">Predicts next month's adoption application volume based on historical moving averages.</p>
+                    <!-- NEW: Summary Description Box -->
+                    <p id="forecast-summary-text" style="text-align: center; font-size: 0.95rem; font-weight: 600; color: var(--primary-color); margin: 0 auto 15px auto; background: #f0f4f8; padding: 10px 15px; border-radius: var(--radius); border: 1px solid #d9e2ec; max-width: 600px;"></p>
                     <div style="position: relative; height:280px; width:100%;">
                         <canvas id="forecastChart"></canvas>
                     </div>
@@ -1630,6 +1637,12 @@ $is_live_fetch = isset($_GET['live']);
         function buildCharts() {
             const data = readAnalytics();
             if (!data) return;
+            
+            // NEW: Inject the summary text on page load
+            if (data.forecast && data.forecast.summary) {
+                const summaryEl = document.getElementById('forecast-summary-text');
+                if (summaryEl) summaryEl.textContent = data.forecast.summary;
+            }
 
             const typeChartEl = document.getElementById('typeChart');
             if (typeChartEl) {
@@ -1726,6 +1739,11 @@ $is_live_fetch = isset($_GET['live']);
         function refreshCharts() {
             const data = readAnalytics();
             if (!data) return;
+            
+            if (data.forecast && data.forecast.summary) {
+                const summaryEl = document.getElementById('forecast-summary-text');
+                if (summaryEl) summaryEl.textContent = data.forecast.summary;
+            }
 
             if (typeChart) {
                 typeChart.data.datasets[0].data = [data.types.dogs, data.types.cats];
