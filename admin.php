@@ -626,7 +626,7 @@ $is_live_fetch = isset($_GET['live']);
         <h2>Admin Panel</h2>
         <ul>
             <li><a href="#manage-pets" data-section="manage-pets" class="active"><i class="fas fa-dog"></i> Manage Pets</a></li>
-            <li><a href="#analytics" data-section="analytics"><i class="fas fa-chart-line"></i> Analytics &amp; Prediction</a></li>
+            <li><a href="#analytics" data-section="analytics"><i class="fas fa-chart-line"></i> Analytics</a></li>
             <li><a href="#applications" data-section="applications"><i class="fas fa-file-alt"></i> Applications</a></li>
             <li><a href="#lost-found" data-section="lost-found"><i class="fas fa-search-location"></i> Lost &amp; Found</a></li>
             <li><a href="#shelter-status" data-section="shelter-status"><i class="fas fa-home"></i> Shelter Status</a></li>
