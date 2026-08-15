@@ -1116,15 +1116,11 @@ $is_live_fetch = isset($_GET['live']);
 
                                 echo "<tr>";
                                 echo "<td><img src='{$row['photo_path']}' alt='Lost Pet Photo' class='thumb' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
-                                
-                                // Clickable link triggering modal
                                 echo "<td><a href='javascript:void(0)' onclick=\"viewLostPetDetails('$js_name', '$js_photo', '$js_loc', '$js_date', '$js_time', '$js_contact', '$js_desc')\" style='font-weight: 600; color: var(--primary-color); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;'>" . htmlspecialchars($row['pet_name']) . "</a></td>";
-                                
                                 echo "<td>" . htmlspecialchars($row['location']) . "</td>";
                                 echo "<td>" . htmlspecialchars($date_seen) . "<br><small style='color: #767e89;'>" . htmlspecialchars($time_seen) . "</small></td>";
                                 echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
-                                
                                 echo "<td>
                                         <div style='display: flex; gap: 5px; justify-content: center;'>
                                             <form method='POST' style='margin:0;'>
@@ -1139,6 +1135,9 @@ $is_live_fetch = isset($_GET['live']);
                                       </td>";
                                 echo "</tr>";
                             }
+                        } else {
+                            echo "<tr><td colspan='7' class='table-empty'>No active missing reports.</td></tr>";
+                        }
                         ?>
                     </tbody>
                 </table>
@@ -1181,15 +1180,11 @@ $is_live_fetch = isset($_GET['live']);
 
                                 echo "<tr class='row-muted'>";
                                 echo "<td><img src='{$row['photo_path']}' alt='Found Pet Photo' class='thumb' style='opacity: 0.7;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
-                                
-                                // Clickable link triggering modal with <del> tag
                                 echo "<td><del><a href='javascript:void(0)' onclick=\"viewLostPetDetails('$js_name', '$js_photo', '$js_loc', '$js_date', '$js_time', '$js_contact', '$js_desc')\" style='color: #767e89; text-decoration: underline; cursor: pointer;'>" . htmlspecialchars($row['pet_name']) . "</a></del></td>";
-                                
                                 echo "<td>" . htmlspecialchars($row['location']) . "</td>";
                                 echo "<td><del>" . htmlspecialchars($date_seen) . "</del><br><small style='color: #767e89;'><del>" . htmlspecialchars($time_seen) . "</del></small></td>";
                                 echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
-                                
                                 echo "<td>
                                         <div style='display: flex; justify-content: center;'>
                                             <form method='POST' style='margin:0;' class='js-confirm' data-confirm-msg='Archive this resolved report?'>
