@@ -848,6 +848,11 @@ $is_live_fetch = isset($_GET['live']);
                         while($row = $missing_query->fetch(PDO::FETCH_ASSOC)){
                             $map_query = urlencode($row['location'] . " Baguio City");
                             $map_link = "https://www.google.com/maps/search/?api=1&query=" . $map_query;
+                            
+                            // Format the last seen date and time
+                            $date_seen = !empty($row['last_seen']) ? date('M d, Y', strtotime($row['last_seen'])) : 'N/A';
+                            $time_seen = !empty($row['last_seen']) ? date('h:i A', strtotime($row['last_seen'])) : '';
+                            $formatted_last_seen = ($date_seen !== 'N/A') ? "$date_seen at $time_seen" : "Not specified";
 
                             echo "<div class='missing-card' style='border-left: 5px solid var(--danger); background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch;'>
                                 <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
@@ -861,7 +866,10 @@ $is_live_fetch = isset($_GET['live']);
                                             <h4 style='margin: 0; color: var(--primary-color); font-size: 1.1rem;'>" . htmlspecialchars($row['pet_name']) . "</h4>
                                             <span style='background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;'>Missing</span>
                                         </div>
-                                        <p style='margin: 0 0 8px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>";
+                                        <p style='margin: 0 0 4px 0; font-size: 0.85rem;'><a href='$map_link' target='_blank' style='text-decoration:none; color:#666;'><i class='fas fa-map-marker-alt' style='color:var(--danger)'></i> " . htmlspecialchars($row['location']) . "</a></p>
+                                        
+                                        <!-- NEW: Time and Date Last Seen -->
+                                        <p style='margin: 0 0 8px 0; font-size: 0.85rem; color: #666;'><i class='far fa-clock' style='color:var(--danger)'></i> " . htmlspecialchars($formatted_last_seen) . "</p>";
                                         
                                         if (!empty($row['description'])) {
                                             echo "<p style='font-size: 0.85rem; color: #555; margin: 0 0 10px 0; font-style: italic; background: #f8f9fa; padding: 8px 10px; border-radius: 4px; border-left: 3px solid #ddd; line-height: 1.4;'>" . htmlspecialchars($row['description']) . "</p>";
