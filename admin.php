@@ -1107,9 +1107,10 @@ $is_live_fetch = isset($_GET['live']);
                                 echo "<td>" . htmlspecialchars($row['location']) . "</td>";
                                 
                                 // --- NEW DATE/TIME COLUMN ---
-                                // Adjust 'last_seen_date' and 'last_seen_time' if your database column names are different
-                                $date_seen = !empty($row['last_seen_date']) ? date('M d, Y', strtotime($row['last_seen_date'])) : 'N/A';
-                                $time_seen = !empty($row['last_seen_time']) ? date('h:i A', strtotime($row['last_seen_time'])) : '';
+                                // Pulling from the single 'last_seen' timestamp column in Supabase
+                                $date_seen = !empty($row['last_seen']) ? date('M d, Y', strtotime($row['last_seen'])) : 'N/A';
+                                $time_seen = !empty($row['last_seen']) ? date('h:i A', strtotime($row['last_seen'])) : '';
+
                                 echo "<td>" . htmlspecialchars($date_seen) . "<br><small style='color: #767e89;'>" . htmlspecialchars($time_seen) . "</small></td>";
                                 // ----------------------------
                                 
@@ -1165,9 +1166,10 @@ $is_live_fetch = isset($_GET['live']);
                                 echo "<td><del>" . htmlspecialchars($row['pet_name']) . "</del></td>";
                                 echo "<td>" . htmlspecialchars($row['location']) . "</td>";
                                 
-                                // --- NEW DATE/TIME COLUMN ---
-                                $date_seen = !empty($row['last_seen_date']) ? date('M d, Y', strtotime($row['last_seen_date'])) : 'N/A';
-                                $time_seen = !empty($row['last_seen_time']) ? date('h:i A', strtotime($row['last_seen_time'])) : '';
+                                // --- NEW DATE/TIME COLUMN (FOR FOUND TABLE) ---
+                                $date_seen = !empty($row['last_seen']) ? date('M d, Y', strtotime($row['last_seen'])) : 'N/A';
+                                $time_seen = !empty($row['last_seen']) ? date('h:i A', strtotime($row['last_seen'])) : '';
+
                                 echo "<td><del>" . htmlspecialchars($date_seen) . "</del><br><small style='color: #767e89;'><del>" . htmlspecialchars($time_seen) . "</del></small></td>";
                                 // ----------------------------
                                 
