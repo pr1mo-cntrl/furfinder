@@ -911,6 +911,9 @@ $is_live_fetch = isset($_GET['live']);
                             <th>Photo</th>
                             <th>Pet Name</th>
                             <th>Location</th>
+                            <th>Last seen</th>
+                            <th>Contact</th>
+                            <th>Details</th>
                             <th>Final Status</th>
                             <th style="text-align: center;">Action</th>
                         </tr>
@@ -1086,6 +1089,7 @@ $is_live_fetch = isset($_GET['live']);
                             <th>PHOTO</th>
                             <th>PET NAME</th>
                             <th>LOCATION</th>
+                            <th>LAST SEEN</th> <!-- NEW HEADER -->
                             <th>CONTACT</th>
                             <th>DETAILS</th>
                             <th style="text-align: center;">ACTION</th>
@@ -1101,8 +1105,15 @@ $is_live_fetch = isset($_GET['live']);
                                 echo "<td><img src='{$row['photo_path']}' alt='Lost Pet Photo' class='thumb' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
                                 echo "<td style='font-weight: 600; color: var(--primary-color);'>" . htmlspecialchars($row['pet_name']) . "</td>";
                                 echo "<td>" . htmlspecialchars($row['location']) . "</td>";
-                                echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 
+                                // --- NEW DATE/TIME COLUMN ---
+                                // Adjust 'last_seen_date' and 'last_seen_time' if your database column names are different
+                                $date_seen = !empty($row['last_seen_date']) ? date('M d, Y', strtotime($row['last_seen_date'])) : 'N/A';
+                                $time_seen = !empty($row['last_seen_time']) ? date('h:i A', strtotime($row['last_seen_time'])) : '';
+                                echo "<td>" . htmlspecialchars($date_seen) . "<br><small style='color: #767e89;'>" . htmlspecialchars($time_seen) . "</small></td>";
+                                // ----------------------------
+                                
+                                echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
                                 
                                 echo "<td>
@@ -1120,7 +1131,7 @@ $is_live_fetch = isset($_GET['live']);
                                 echo "</tr>";
                             }
                         } else {
-                            echo "<tr><td colspan='6' class='table-empty'>No active missing reports.</td></tr>";
+                            echo "<tr><td colspan='7' class='table-empty'>No active missing reports.</td></tr>";
                         }
                         ?>
                     </tbody>
@@ -1137,6 +1148,7 @@ $is_live_fetch = isset($_GET['live']);
                             <th>PHOTO</th>
                             <th>PET NAME</th>
                             <th>LOCATION</th>
+                            <th>LAST SEEN</th> <!-- NEW HEADER -->
                             <th>CONTACT</th>
                             <th>DETAILS</th>
                             <th style="text-align: center;">ACTION</th>
@@ -1152,6 +1164,13 @@ $is_live_fetch = isset($_GET['live']);
                                 echo "<td><img src='{$row['photo_path']}' alt='Found Pet Photo' class='thumb' style='opacity: 0.7;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
                                 echo "<td><del>" . htmlspecialchars($row['pet_name']) . "</del></td>";
                                 echo "<td>" . htmlspecialchars($row['location']) . "</td>";
+                                
+                                // --- NEW DATE/TIME COLUMN ---
+                                $date_seen = !empty($row['last_seen_date']) ? date('M d, Y', strtotime($row['last_seen_date'])) : 'N/A';
+                                $time_seen = !empty($row['last_seen_time']) ? date('h:i A', strtotime($row['last_seen_time'])) : '';
+                                echo "<td><del>" . htmlspecialchars($date_seen) . "</del><br><small style='color: #767e89;'><del>" . htmlspecialchars($time_seen) . "</del></small></td>";
+                                // ----------------------------
+                                
                                 echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
                                 
@@ -1166,7 +1185,7 @@ $is_live_fetch = isset($_GET['live']);
                                 echo "</tr>";
                             }
                         } else {
-                            echo "<tr><td colspan='6' class='table-empty'>No found pets yet.</td></tr>";
+                            echo "<tr><td colspan='7' class='table-empty'>No found pets yet.</td></tr>";
                         }
                         ?>
                     </tbody>
