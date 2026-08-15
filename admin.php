@@ -768,6 +768,17 @@ $is_live_fetch = isset($_GET['live']);
                     <?php
                     $pets = $conn->query("SELECT * FROM pets WHERE is_archived = 0 ORDER BY id DESC");
                     while($row = $pets->fetch(PDO::FETCH_ASSOC)):
+                        // Clean up newlines for the JavaScript onclick handler
+                        $js_id = htmlspecialchars($row['id'], ENT_QUOTES);
+                        $js_name = htmlspecialchars($row['name'], ENT_QUOTES);
+                        $js_breed = htmlspecialchars($row['breed'], ENT_QUOTES);
+                        $js_age = htmlspecialchars($row['age'], ENT_QUOTES);
+                        
+                        $raw_backstory = isset($row['backstory']) ? $row['backstory'] : '';
+                        $js_backstory = htmlspecialchars(str_replace(array("\r", "\n"), ' ', $raw_backstory), ENT_QUOTES);
+                        
+                        $raw_medical = isset($row['medical_history']) ? $row['medical_history'] : '';
+                        $js_medical = htmlspecialchars(str_replace(array("\r", "\n"), ' ', $raw_medical), ENT_QUOTES);
                     ?>
                         <tr>
                             <td><?php echo $row['id']; ?></td>
@@ -786,7 +797,7 @@ $is_live_fetch = isset($_GET['live']);
                                     <?php endif; ?>
                             
                                     <button type="button" class="btn-save" 
-                                            onclick="openEditModal('<?php echo htmlspecialchars($row['id'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($row['name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($row['breed'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($row['age'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars(isset($row['backstory']) ? $row['backstory'] : '', ENT_QUOTES); ?>', '<?php echo htmlspecialchars(isset($row['medical_history']) ? $row['medical_history'] : '', ENT_QUOTES); ?>')">
+                                            onclick="openEditModal('<?php echo $js_id; ?>', '<?php echo $js_name; ?>', '<?php echo $js_breed; ?>', '<?php echo $js_age; ?>', '<?php echo $js_backstory; ?>', '<?php echo $js_medical; ?>')">
                                         Edit
                                     </button>
                                     
