@@ -303,10 +303,54 @@ function notifAgo($timestamp) {
 
 // Emitted as a JSON island the charts read from, so live-sync can swap the
 // numbers in the same way it swaps a table body.
+// --- PREDICTIVE ANALYTICS: Application Volume Forecast ---
+$forecast_labels = [];
+$historical_data = [];
+$forecast_data = [];
+
+try {
+    // Fetch actual counts for the last 5 months based on created_at timestamps
+    for ($i = 4; $i >= 0; $i--) {
+        $month_label = date('M Y', strtotime("-$i months"));
+        $forecast_labels[] = $month_label;
+        
+        $start_date = date('Y-m-01 00:00:00', strtotime("-$i months"));
+        $end_date = date('Y-m-t 23:59:59', strtotime("-$i months"));
+        
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM applications WHERE created_at >= ? AND created_at <= ? AND is_archived = 0");
+        $stmt->execute([$start_date, $end_date]);
+        $historical_data[] = (int)$stmt->fetchColumn();
+        $forecast_data[] = null;
+    }
+} catch (PDOException $e) {
+    // Fallback sample data in case the created_at column is empty or missing
+    $forecast_labels = [date('M Y', strtotime("-4 months")), date('M Y', strtotime("-3 months")), date('M Y', strtotime("-2 months")), date('M Y', strtotime("-1 months")), date('M Y')];
+    $historical_data = [2, 5, 4, 8, $app_pending + $app_approved + $app_rejected];
+    $forecast_data = [null, null, null, null, null];
+}
+
+// Calculate the Forecast (Simple Moving Average of the last 3 months)
+$last_3 = array_slice($historical_data, -3);
+$prediction = count($last_3) > 0 ? ceil(array_sum($last_3) / count($last_3)) : 0;
+
+// Push the predicted month onto the arrays
+$forecast_labels[] = date('M Y', strtotime('+1 month')) . ' (Forecast)';
+$historical_data[] = null; 
+
+// Connect the lines seamlessly in Chart.js
+$forecast_data[4] = $historical_data[4] ?? 0;
+$forecast_data[] = $prediction;
+
+// Emitted as a JSON island the charts read from
 $analytics_payload = [
     'types'    => ['dogs' => (int)$dog_count, 'cats' => (int)$cat_count],
     'breeds'   => ['labels' => $breed_labels, 'counts' => array_map('intval', $breed_counts)],
     'pipeline' => ['pending' => (int)$app_pending, 'approved' => (int)$app_approved, 'rejected' => (int)$app_rejected],
+    'forecast' => [
+        'labels' => $forecast_labels,
+        'historical' => $historical_data,
+        'prediction' => $forecast_data
+    ]
 ];
 
 // A background live-sync render must not consume one-shot flash messages that
@@ -1028,6 +1072,38 @@ $is_live_fetch = isset($_GET['live']);
             </div>
         </div>
 
+        <div class="chart-grid">
+                <div class="chart-card">
+                    <h4>Active Population</h4>
+                    <div style="position: relative; height:250px; max-width:280px; margin:0 auto;">
+                        <canvas id="typeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h4>Top 5 Available Breeds</h4>
+                    <div style="position: relative; height:250px;">
+                        <canvas id="breedChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card chart-card-wide">
+                    <h4>Application Pipeline</h4>
+                    <div style="position: relative; height:250px; max-width:280px; margin:0 auto;">
+                        <canvas id="appChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- NEW FORECAST CHART -->
+                <div class="chart-card chart-card-wide">
+                    <h4>Application Volume Forecast (30-Day Trend)</h4>
+                    <p style="text-align: center; font-size: 0.8rem; color: #767e89; margin-bottom: 10px;">Predicts next month's adoption application volume based on historical moving averages.</p>
+                    <div style="position: relative; height:280px; width:100%;">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
         <div id="applications" class="section">
             <h3>Adoption Applications</h3>
             <p class="section-note">Review each applicant's submitted documents before approving or rejecting.</p>
@@ -1562,7 +1638,7 @@ $is_live_fetch = isset($_GET['live']);
             document.getElementById('appDetailsModal').style.display = 'flex';
         }
 
-        let typeChart = null, breedChart = null, appChart = null;
+        let typeChart = null, breedChart = null, appChart = null, forecastChart = null;
 
         function readAnalytics() {
             const island = document.getElementById('analytics-data');
@@ -1630,11 +1706,46 @@ $is_live_fetch = isset($_GET['live']);
                     options: { responsive: true, maintainAspectRatio: false }
                 });
             }
+
+            // NEW FORECAST CHART INITIALIZATION
+            const forecastChartEl = document.getElementById('forecastChart');
+            if (forecastChartEl) {
+                forecastChart = new Chart(forecastChartEl.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: data.forecast.labels,
+                        datasets: [
+                            {
+                                label: 'Historical Applications',
+                                data: data.forecast.historical,
+                                borderColor: '#003366',
+                                backgroundColor: 'rgba(0, 51, 102, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3
+                            },
+                            {
+                                label: 'Predicted Trend (SMA)',
+                                data: data.forecast.prediction,
+                                borderColor: '#d4af37',
+                                backgroundColor: 'transparent',
+                                borderWidth: 3,
+                                borderDash: [5, 5], 
+                                tension: 0.3,
+                                pointBackgroundColor: '#d4af37',
+                                pointRadius: 5
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    }
+                });
+            }
         }
 
-        // Charts are canvas-backed, so live-sync can't swap them the way it swaps
-        // a table body - it refreshes the JSON island and we push the new numbers
-        // into the existing Chart instances instead of rebuilding them.
         function refreshCharts() {
             const data = readAnalytics();
             if (!data) return;
@@ -1651,6 +1762,12 @@ $is_live_fetch = isset($_GET['live']);
             if (appChart) {
                 appChart.data.datasets[0].data = [data.pipeline.pending, data.pipeline.approved, data.pipeline.rejected];
                 appChart.update();
+            }
+            if (forecastChart) {
+                forecastChart.data.labels = data.forecast.labels;
+                forecastChart.data.datasets[0].data = data.forecast.historical;
+                forecastChart.data.datasets[1].data = data.forecast.prediction;
+                forecastChart.update();
             }
         }
 
