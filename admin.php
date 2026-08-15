@@ -922,24 +922,46 @@ $is_live_fetch = isset($_GET['live']);
                         <?php
                         $archived_lost = $conn->query("SELECT * FROM lost_pets WHERE is_archived = 1 ORDER BY id DESC");
                         if ($archived_lost && $archived_lost->rowCount() > 0) {
-                            while($row = $archived_lost->fetch(PDO::FETCH_ASSOC)):
-                        ?>
-                            <tr>
-                                <td><img src="<?php echo htmlspecialchars($row['photo_path']); ?>" alt="Lost Pet Photo" class="thumb" onerror="this.src='https://via.placeholder.com/50'"></td>
-                                <td><?php echo htmlspecialchars($row['pet_name']); ?></td>
-                                <td><?php echo htmlspecialchars($row['location']); ?></td>
-                                <td><?php echo htmlspecialchars($row['status']); ?></td>
-                                <td style="text-align: center;">
-                                    <form method="POST" style="margin:0; display:inline-block;">
-                                        <input type="hidden" name="lost_pet_id" value="<?php echo $row['id']; ?>">
-                                        <button type="submit" name="restore_lost_pet" class="btn-save" style="background-color: #17a2b8;"><i class="fas fa-undo"></i> Restore</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php
-                            endwhile;
+                            while($row = $archived_lost->fetch(PDO::FETCH_ASSOC)) {
+                                // Prepare variables
+                                $date_seen = !empty($row['last_seen']) ? date('M d, Y', strtotime($row['last_seen'])) : 'N/A';
+                                $time_seen = !empty($row['last_seen']) ? date('h:i A', strtotime($row['last_seen'])) : '';
+
+                                // Safe JS variables
+                                $js_name = htmlspecialchars($row['pet_name'], ENT_QUOTES);
+                                $js_photo = htmlspecialchars($row['photo_path'], ENT_QUOTES);
+                                $js_loc = htmlspecialchars($row['location'], ENT_QUOTES);
+                                $js_date = htmlspecialchars($date_seen, ENT_QUOTES);
+                                $js_time = htmlspecialchars($time_seen, ENT_QUOTES);
+                                $js_contact = htmlspecialchars($row['contact_number'], ENT_QUOTES);
+                                $js_desc = htmlspecialchars(str_replace(array("\r", "\n"), ' ', $row['description']), ENT_QUOTES);
+
+                                echo "<tr>";
+                                echo "<td><img src='" . htmlspecialchars($row['photo_path']) . "' alt='Lost Pet Photo' class='thumb' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
+                                
+                                // Clickable link triggering the modal!
+                                echo "<td><a href='javascript:void(0)' onclick=\"viewLostPetDetails('$js_name', '$js_photo', '$js_loc', '$js_date', '$js_time', '$js_contact', '$js_desc')\" style='font-weight: 600; color: var(--primary-color); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;'>" . htmlspecialchars($row['pet_name']) . "</a></td>";
+                                
+                                echo "<td>" . htmlspecialchars($row['location']) . "</td>";
+                                echo "<td>" . htmlspecialchars($date_seen) . "<br><small style='color: #767e89;'>" . htmlspecialchars($time_seen) . "</small></td>";
+                                echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
+                                echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
+                                
+                                // Final Status
+                                echo "<td><span style='font-weight: 600; color: #555;'>" . htmlspecialchars($row['status']) . "</span></td>";
+                                
+                                // Action Button
+                                echo "<td style='text-align: center;'>
+                                        <form method='POST' style='margin:0; display:inline-block;'>
+                                            <input type='hidden' name='lost_pet_id' value='{$row['id']}'>
+                                            <button type='submit' name='restore_lost_pet' class='btn-save' style='background-color: #17a2b8;'><i class='fas fa-undo'></i> Restore</button>
+                                        </form>
+                                      </td>";
+                                echo "</tr>";
+                            }
                         } else {
-                            echo "<tr><td colspan='5' class='table-empty'>No archived lost &amp; found reports.</td></tr>";
+                            // Updated colspan from 5 to 8 to match the headers
+                            echo "<tr><td colspan='8' class='table-empty'>No archived lost &amp; found reports.</td></tr>";
                         }
                         ?>
                     </tbody>
