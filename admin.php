@@ -1101,19 +1101,27 @@ $is_live_fetch = isset($_GET['live']);
                         
                         if($missing && $missing->rowCount() > 0) {
                             while($row = $missing->fetch(PDO::FETCH_ASSOC)) {
-                                echo "<tr>";
-                                echo "<td><img src='{$row['photo_path']}' alt='Lost Pet Photo' class='thumb' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
-                                echo "<td style='font-weight: 600; color: var(--primary-color);'>" . htmlspecialchars($row['pet_name']) . "</td>";
-                                echo "<td>" . htmlspecialchars($row['location']) . "</td>";
-                                
-                                // --- NEW DATE/TIME COLUMN ---
-                                // Pulling from the single 'last_seen' timestamp column in Supabase
+                                // Prepare variables
                                 $date_seen = !empty($row['last_seen']) ? date('M d, Y', strtotime($row['last_seen'])) : 'N/A';
                                 $time_seen = !empty($row['last_seen']) ? date('h:i A', strtotime($row['last_seen'])) : '';
 
-                                echo "<td>" . htmlspecialchars($date_seen) . "<br><small style='color: #767e89;'>" . htmlspecialchars($time_seen) . "</small></td>";
-                                // ----------------------------
+                                // Safe JS variables
+                                $js_name = htmlspecialchars($row['pet_name'], ENT_QUOTES);
+                                $js_photo = htmlspecialchars($row['photo_path'], ENT_QUOTES);
+                                $js_loc = htmlspecialchars($row['location'], ENT_QUOTES);
+                                $js_date = htmlspecialchars($date_seen, ENT_QUOTES);
+                                $js_time = htmlspecialchars($time_seen, ENT_QUOTES);
+                                $js_contact = htmlspecialchars($row['contact_number'], ENT_QUOTES);
+                                $js_desc = htmlspecialchars(str_replace(array("\r", "\n"), ' ', $row['description']), ENT_QUOTES);
+
+                                echo "<tr>";
+                                echo "<td><img src='{$row['photo_path']}' alt='Lost Pet Photo' class='thumb' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
                                 
+                                // Clickable link triggering modal
+                                echo "<td><a href='javascript:void(0)' onclick=\"viewLostPetDetails('$js_name', '$js_photo', '$js_loc', '$js_date', '$js_time', '$js_contact', '$js_desc')\" style='font-weight: 600; color: var(--primary-color); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;'>" . htmlspecialchars($row['pet_name']) . "</a></td>";
+                                
+                                echo "<td>" . htmlspecialchars($row['location']) . "</td>";
+                                echo "<td>" . htmlspecialchars($date_seen) . "<br><small style='color: #767e89;'>" . htmlspecialchars($time_seen) . "</small></td>";
                                 echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
                                 
@@ -1131,9 +1139,6 @@ $is_live_fetch = isset($_GET['live']);
                                       </td>";
                                 echo "</tr>";
                             }
-                        } else {
-                            echo "<tr><td colspan='7' class='table-empty'>No active missing reports.</td></tr>";
-                        }
                         ?>
                     </tbody>
                 </table>
@@ -1161,18 +1166,27 @@ $is_live_fetch = isset($_GET['live']);
                         
                         if($found && $found->rowCount() > 0) {
                             while($row = $found->fetch(PDO::FETCH_ASSOC)) {
-                                echo "<tr class='row-muted'>";
-                                echo "<td><img src='{$row['photo_path']}' alt='Found Pet Photo' class='thumb' style='opacity: 0.7;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
-                                echo "<td><del>" . htmlspecialchars($row['pet_name']) . "</del></td>";
-                                echo "<td>" . htmlspecialchars($row['location']) . "</td>";
-                                
-                                // --- NEW DATE/TIME COLUMN (FOR FOUND TABLE) ---
+                                // Prepare variables
                                 $date_seen = !empty($row['last_seen']) ? date('M d, Y', strtotime($row['last_seen'])) : 'N/A';
                                 $time_seen = !empty($row['last_seen']) ? date('h:i A', strtotime($row['last_seen'])) : '';
 
-                                echo "<td><del>" . htmlspecialchars($date_seen) . "</del><br><small style='color: #767e89;'><del>" . htmlspecialchars($time_seen) . "</del></small></td>";
-                                // ----------------------------
+                                // Safe JS variables
+                                $js_name = htmlspecialchars($row['pet_name'], ENT_QUOTES);
+                                $js_photo = htmlspecialchars($row['photo_path'], ENT_QUOTES);
+                                $js_loc = htmlspecialchars($row['location'], ENT_QUOTES);
+                                $js_date = htmlspecialchars($date_seen, ENT_QUOTES);
+                                $js_time = htmlspecialchars($time_seen, ENT_QUOTES);
+                                $js_contact = htmlspecialchars($row['contact_number'], ENT_QUOTES);
+                                $js_desc = htmlspecialchars(str_replace(array("\r", "\n"), ' ', $row['description']), ENT_QUOTES);
+
+                                echo "<tr class='row-muted'>";
+                                echo "<td><img src='{$row['photo_path']}' alt='Found Pet Photo' class='thumb' style='opacity: 0.7;' onerror=\"this.src='https://via.placeholder.com/50'\"></td>";
                                 
+                                // Clickable link triggering modal with <del> tag
+                                echo "<td><del><a href='javascript:void(0)' onclick=\"viewLostPetDetails('$js_name', '$js_photo', '$js_loc', '$js_date', '$js_time', '$js_contact', '$js_desc')\" style='color: #767e89; text-decoration: underline; cursor: pointer;'>" . htmlspecialchars($row['pet_name']) . "</a></del></td>";
+                                
+                                echo "<td>" . htmlspecialchars($row['location']) . "</td>";
+                                echo "<td><del>" . htmlspecialchars($date_seen) . "</del><br><small style='color: #767e89;'><del>" . htmlspecialchars($time_seen) . "</del></small></td>";
                                 echo "<td>" . htmlspecialchars($row['contact_number']) . "</td>";
                                 echo "<td style='font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' title='" . htmlspecialchars($row['description']) . "'>" . htmlspecialchars($row['description']) . "</td>";
                                 
@@ -1291,6 +1305,39 @@ $is_live_fetch = isset($_GET['live']);
             </div>
         </div>
     </div>
+
+        <!-- LOST PET DETAILS MODAL -->
+            <div id="lostPetDetailsModal" class="modal">
+                <div class="modal-content" style="max-width: 500px; text-align: center;">
+                    <span class="close-modal" onclick="document.getElementById('lostPetDetailsModal').style.display='none'">&times;</span>
+                    <h3 style="margin-bottom: 15px; color: var(--primary-color);" id="modalLostPetName">Pet Name</h3>
+                    
+                    <img id="modalLostPetImage" src="" alt="Lost Pet" style="width: 100%; max-height: 300px; object-fit: contain; border-radius: var(--radius); margin-bottom: 15px; background: #f8f9fa;">
+                    
+                    <div style="text-align: left;">
+                        <div class="detail-row"><span class="detail-label">Location:</span> <span class="detail-value" id="modalLostPetLocation"></span></div>
+                        <div class="detail-row"><span class="detail-label">Last Seen:</span> <span class="detail-value" id="modalLostPetLastSeen"></span></div>
+                        <div class="detail-row"><span class="detail-label">Contact:</span> <span class="detail-value" id="modalLostPetContact"></span></div>
+                        <div class="detail-row" style="flex-direction: column; align-items: flex-start; border-bottom: none;">
+                            <span class="detail-label" style="width: 100%; margin-bottom: 5px;">Details/Description:</span> 
+                            <span class="detail-value" id="modalLostPetDetails" style="background: #f8f9fa; padding: 10px; border-radius: 4px; width: 100%; border: 1px solid #eee; min-height: 60px;"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            function viewLostPetDetails(name, photo, location, dateSeen, timeSeen, contact, details) {
+                document.getElementById('modalLostPetName').textContent = name;
+                document.getElementById('modalLostPetImage').src = photo || 'https://via.placeholder.com/500';
+                document.getElementById('modalLostPetLocation').textContent = location;
+                document.getElementById('modalLostPetLastSeen').textContent = (dateSeen !== 'N/A') ? (dateSeen + ' at ' + timeSeen) : 'Not specified';
+                document.getElementById('modalLostPetContact').textContent = contact;
+                document.getElementById('modalLostPetDetails').textContent = details;
+                
+                document.getElementById('lostPetDetailsModal').style.display = 'flex';
+            }
+            </script>
 
     <script>
         let pendingConfirmForm = null;
