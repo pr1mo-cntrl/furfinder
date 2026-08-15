@@ -335,7 +335,7 @@ $prediction = count($last_3) > 0 ? ceil(array_sum($last_3) / count($last_3)) : 0
 
 // --- NEW: Generate Dynamic Summary String ---
 $predicted_month = date('F Y', strtotime('+1 month'));
-$trend_summary = "Based on the 3-month moving average, the system forecasts approximately " . $prediction . " adoption application(s) for " . $predicted_month . ".";
+$trend_summary = "Based on recent trends, we expect approximately " . $prediction . " adoption application(s) for " . $predicted_month . ".";
 
 // Push the predicted month onto the arrays
 $forecast_labels[] = date('M Y', strtotime('+1 month')) . ' (Forecast)';
@@ -1078,7 +1078,7 @@ $is_live_fetch = isset($_GET['live']);
                 <!-- NEW FORECAST CHART -->
                 <div class="chart-card chart-card-wide">
                     <h4>Application Volume Forecast (30-Day Trend)</h4>
-                    <p style="text-align: center; font-size: 0.8rem; color: #767e89; margin-bottom: 10px;">Predicts next month's adoption application volume based on historical moving averages.</p>
+                    <p style="text-align: center; font-size: 0.8rem; color: #767e89; margin-bottom: 10px;">Estimates upcoming adoption applications based on recent monthly totals.</p>
                     <!-- NEW: Summary Description Box -->
                     <p id="forecast-summary-text" style="text-align: center; font-size: 0.95rem; font-weight: 600; color: var(--primary-color); margin: 0 auto 15px auto; background: #f0f4f8; padding: 10px 15px; border-radius: var(--radius); border: 1px solid #d9e2ec; max-width: 600px;"></p>
                     <div style="position: relative; height:280px; width:100%;">
@@ -1706,7 +1706,7 @@ $is_live_fetch = isset($_GET['live']);
                         labels: data.forecast.labels,
                         datasets: [
                             {
-                                label: 'Historical Applications',
+                                label: 'Actual Applications',
                                 data: data.forecast.historical,
                                 borderColor: '#003366',
                                 backgroundColor: 'rgba(0, 51, 102, 0.1)',
@@ -1715,7 +1715,7 @@ $is_live_fetch = isset($_GET['live']);
                                 tension: 0.3
                             },
                             {
-                                label: 'Predicted Trend (SMA)',
+                                label: 'Expected Applications',
                                 data: data.forecast.prediction,
                                 borderColor: '#d4af37',
                                 backgroundColor: 'transparent',
