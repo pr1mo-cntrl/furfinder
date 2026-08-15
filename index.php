@@ -776,7 +776,9 @@ $is_live_fetch = isset($_GET['live']);
                     while($my_row = $my_reports->fetch(PDO::FETCH_ASSOC)) {
                     ?>
                     <div class="active-report-card" style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                        <img src="<?php echo $my_row['photo_path']; ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
+                        <a href="<?php echo htmlspecialchars($my_row['photo_path']); ?>" target="_blank" title="View Full Image">
+                        <img src="<?php echo htmlspecialchars($my_row['photo_path']); ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                        </a>
                         <div style="flex-grow: 1;">
                             <strong style="color: var(--danger);"><?php echo htmlspecialchars($my_row['pet_name']); ?></strong><br>
                             <span style="font-size: 0.85rem; color: #666;">Reported Missing</span>
@@ -849,7 +851,9 @@ $is_live_fetch = isset($_GET['live']);
 
                             echo "<div class='missing-card' style='border-left: 5px solid var(--danger); background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch;'>
                                 <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
-                                    <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover;'>
+                                    <a href='{$row['photo_path']}' target='_blank' style='display: block; width: 100%; height: 100%;' title='View Full Image'>
+                                        <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;' onmouseover=\"this.style.transform='scale(1.05)'\" onmouseout=\"this.style.transform='scale(1)'\">
+                                    </a>
                                 </div>
                                 <div style='flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;'>
                                     <div>
@@ -903,7 +907,9 @@ $is_live_fetch = isset($_GET['live']);
 
                             echo "<div class='missing-card' style='border-left: 5px solid var(--success); background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; gap: 15px; margin-bottom: 15px; align-items: stretch; opacity: 0.85;'>
                                 <div class='missing-img-container' style='width: 120px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #eee;'>
-                                    <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover;'>
+                                    <a href='{$row['photo_path']}' target='_blank' style='display: block; width: 100%; height: 100%;' title='View Full Image'>
+                                        <img src='{$row['photo_path']}' style='width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;' onmouseover=\"this.style.transform='scale(1.05)'\" onmouseout=\"this.style.transform='scale(1)'\">
+                                    </a>
                                 </div>
                                 <div style='flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;'>
                                     <div>
