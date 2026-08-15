@@ -1069,30 +1069,6 @@ $is_live_fetch = isset($_GET['live']);
                         <canvas id="appChart"></canvas>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="chart-grid">
-                <div class="chart-card">
-                    <h4>Active Population</h4>
-                    <div style="position: relative; height:250px; max-width:280px; margin:0 auto;">
-                        <canvas id="typeChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="chart-card">
-                    <h4>Top 5 Available Breeds</h4>
-                    <div style="position: relative; height:250px;">
-                        <canvas id="breedChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="chart-card chart-card-wide">
-                    <h4>Application Pipeline</h4>
-                    <div style="position: relative; height:250px; max-width:280px; margin:0 auto;">
-                        <canvas id="appChart"></canvas>
-                    </div>
-                </div>
 
                 <!-- NEW FORECAST CHART -->
                 <div class="chart-card chart-card-wide">
@@ -1103,6 +1079,7 @@ $is_live_fetch = isset($_GET['live']);
                     </div>
                 </div>
             </div>
+        </div>
 
         <div id="applications" class="section">
             <h3>Adoption Applications</h3>
