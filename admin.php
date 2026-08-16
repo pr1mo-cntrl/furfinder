@@ -520,7 +520,7 @@ $is_live_fetch = isset($_GET['live']);
         .tab-btn i { margin-right: 6px; }
 
         /* Analytics chart cards - match the .card / .section surface treatment */
-        .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 950px; margin: 0 auto; }
+        .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
         .chart-card { background: var(--white); padding: 20px; border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
         .chart-card h4 { text-align: center; margin-bottom: 15px; color: #4a5568; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
         .chart-card-wide { grid-column: 1 / -1; }
@@ -1068,7 +1068,7 @@ $is_live_fetch = isset($_GET['live']);
                     </div>
                 </div>
 
-                <div class="chart-card chart-card-wide">
+                <div class="chart-card">
                     <h4>Application Pipeline</h4>
                     <div style="position: relative; height:250px; max-width:280px; margin:0 auto;">
                         <canvas id="appChart"></canvas>
